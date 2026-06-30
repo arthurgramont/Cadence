@@ -1,96 +1,13 @@
 /**
- * Calculateur de splits — skill déterministe Cadence
+ * Calculateur de splits — skill déterministe Cadence (CLI)
  * Usage : npx tsx scripts/calculate-splits.ts <distanceKm> <tempsSecondes>
  * Exemple : npx tsx scripts/calculate-splits.ts 10 2340
+ *
+ * La logique de calcul est dans src/lib/utils/splits.ts (partagée avec l'UI).
  */
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type Split = {
-  km: number
-  splitTimeSeconds: number
-  cumulativeTimeSeconds: number
-  cumulativeTimeFormatted: string
-}
-
-type SplitResult = {
-  distanceKm: number
-  targetTimeSeconds: number
-  paceSecondsPerKm: number
-  paceFormatted: string
-  paceMileFormatted: string
-  splits: Split[]
-  lastSplitDistanceKm: number | null
-}
-
-// ─── Constantes ───────────────────────────────────────────────────────────────
-
-const KM_TO_MILES = 1.60934
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatTime(totalSeconds: number): string {
-  const rounded = Math.round(totalSeconds)
-  const h = Math.floor(rounded / 3600)
-  const m = Math.floor((rounded % 3600) / 60)
-  const s = rounded % 60
-  const mm = String(m).padStart(2, '0')
-  const ss = String(s).padStart(2, '0')
-  return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`
-}
-
-function formatPace(secondsPerKm: number): string {
-  const m = Math.floor(secondsPerKm / 60)
-  const s = Math.round(secondsPerKm % 60)
-  return `${m}:${String(s).padStart(2, '0')}`
-}
-
-// ─── Calcul principal ─────────────────────────────────────────────────────────
-
-function calculateSplits(distanceKm: number, targetTimeSeconds: number): SplitResult {
-  if (distanceKm <= 0) throw new Error('La distance doit être strictement positive.')
-  if (targetTimeSeconds <= 0) throw new Error('Le temps cible doit être strictement positif.')
-
-  const paceSecondsPerKm = targetTimeSeconds / distanceKm
-  const paceMileSecondsPerKm = paceSecondsPerKm * KM_TO_MILES
-
-  const fullKms = Math.floor(distanceKm)
-  const remainder = distanceKm - fullKms
-
-  const splits: Split[] = []
-
-  for (let i = 1; i <= fullKms; i++) {
-    const cumulative = i * paceSecondsPerKm
-    splits.push({
-      km: i,
-      splitTimeSeconds: paceSecondsPerKm,
-      cumulativeTimeSeconds: cumulative,
-      cumulativeTimeFormatted: formatTime(cumulative),
-    })
-  }
-
-  const lastSplitDistanceKm = remainder > 0.001 ? remainder : null
-
-  if (lastSplitDistanceKm !== null) {
-    const cumulative = targetTimeSeconds
-    splits.push({
-      km: distanceKm,
-      splitTimeSeconds: lastSplitDistanceKm * paceSecondsPerKm,
-      cumulativeTimeSeconds: cumulative,
-      cumulativeTimeFormatted: formatTime(cumulative),
-    })
-  }
-
-  return {
-    distanceKm,
-    targetTimeSeconds,
-    paceSecondsPerKm,
-    paceFormatted: `${formatPace(paceSecondsPerKm)} /km`,
-    paceMileFormatted: `${formatPace(paceMileSecondsPerKm)} /mile`,
-    splits,
-    lastSplitDistanceKm,
-  }
-}
+import { calculateSplits, formatTime, formatPace } from '../src/lib/utils/splits'
+import type { SplitResult } from '../src/lib/utils/splits'
 
 // ─── Affichage terminal ───────────────────────────────────────────────────────
 
@@ -106,12 +23,9 @@ function printResult(result: SplitResult): void {
   console.log()
 
   const kmWidth = String(result.distanceKm).length + 1
-  const header =
-    ` ${' Km'.padStart(kmWidth)} │ Split  │ Passage`
-  const divider =
-    `─${'─'.repeat(kmWidth + 1)}─┼────────┼─────────`
-  const footer =
-    `─${'─'.repeat(kmWidth + 1)}─┴────────┴─────────`
+  const header = ` ${' Km'.padStart(kmWidth)} │ Split  │ Passage`
+  const divider = `─${'─'.repeat(kmWidth + 1)}─┼────────┼─────────`
+  const footer = `─${'─'.repeat(kmWidth + 1)}─┴────────┴─────────`
 
   console.log(header)
   console.log(divider)
@@ -159,6 +73,3 @@ function main(): void {
 }
 
 main()
-
-export { calculateSplits, formatTime, formatPace }
-export type { SplitResult, Split }
