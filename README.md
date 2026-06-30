@@ -27,7 +27,18 @@ Cadence automatise le calcul de la charge d'entraînement et prévient l'usure c
 
 ---
 
-## Démarrage rapide
+## Lancement Instantané (Option Docker recommandé pour l'évaluation)
+
+```bash
+docker compose up --build
+# → http://localhost:3000
+```
+
+Aucune dépendance locale requise — Node.js, SQLite et les migrations sont encapsulés dans le conteneur.
+
+---
+
+## Démarrage rapide (développement local)
 
 ```bash
 # 1. Installer les dépendances
