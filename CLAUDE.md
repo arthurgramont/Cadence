@@ -1,5 +1,34 @@
 # Cadence — Notes pour Claude
 
+## CRITERES DE VALIDATION DE L'AGENT (priorité absolue)
+
+> **Ces règles s'appliquent AVANT toute déclaration de tâche terminée.**
+
+### Obligation de double-gate après chaque modification de code
+
+Après **chaque** modification de fichier TypeScript ou TSX, l'agent DOIT enchaîner dans l'ordre :
+
+```bash
+npm test && npx tsx scripts/audit-dette.ts
+```
+
+Un commit ou une déclaration de tâche terminée n'est valide que si les deux commandes retournent `exit 0`.
+
+### Critères de blocage immédiat
+
+Si l'audit détecte l'une de ces violations, l'agent DOIT refactoriser avant de valider :
+
+- **Fichier > 250 lignes** → découper en modules à responsabilité unique
+- **`any` TypeScript explicite** → remplacer par un type Drizzle ou un type strict
+- **Marqueur `TODO` / `FIXME`** → implémenter ou supprimer
+- **Fonction vide / stub** → implémenter complètement
+- **`console.log` dans le code source** → supprimer (utiliser les retours d'erreur des Server Actions)
+- **Fonction > 50 lignes** → extraire en sous-fonctions nommées
+
+### Rappel du contrat de qualité
+
+L'agent ne rend jamais la main avec un score d'audit < 100% ni des tests en échec.
+
 ## Pitch
 
 Cadence est un dashboard de performance et de suivi de matériel pour triathlètes qui automatise le calcul de la charge d'entraînement et prévient l'usure critique des équipements selon des critères kilométriques et temporels.
