@@ -111,11 +111,99 @@ Ce script est prévu pour être intégré comme Server Action dans l'onglet "Obj
 
 ---
 
-## Skills prévus (J3+)
+---
+
+## Skill 2 — Auditeur de dette technique (`audit-dette`)
+
+**Fichier** : `scripts/audit-dette.ts`
+**Exécution** : `npx tsx scripts/audit-dette.ts [--src <path>]`
+
+### Objectif
+
+Scanner de façon déterministe tous les fichiers `.ts`/`.tsx` d'un répertoire source pour détecter quatre catégories de dette technique, puis afficher un score global de santé du code.
+
+### Signature
+
+```typescript
+function analyzeFile(absPath: string, srcRoot: string): FileReport
+function computeScore(reports: FileReport[]): { score: number; penalties: string[] }
+```
+
+### Types
+
+```typescript
+type LineMatch = { line: number; excerpt: string }
+type FileReport = {
+  rel: string
+  lineCount: number
+  anyMatches: LineMatch[]   // usages de `any` TypeScript
+  todoMatches: LineMatch[]  // marqueurs TODO / FIXME
+  stubMatches: LineMatch[]  // fonctions vides / stubs
+}
+```
+
+### Catégories détectées
+
+| Catégorie | Pattern | Pénalité |
+|---|---|---|
+| Fichier > 250 lignes (god file) | `lineCount > MAX_FILE_LINES` | −10 pts/fichier |
+| Type `any` explicite | `: any`, `as any`, `<any>`, `any[]` | −3 pts/occurrence |
+| Marqueur TODO/FIXME | `/\b(TODO\|FIXME)\b/i` | −2 pts/occurrence |
+| Fonction vide / stub | `=> {}`, `function f() {}` | −5 pts/occurrence |
+
+### Formule de score
+
+```
+score = max(0, 100 − godFiles×10 − anyCount×3 − todoCount×2 − stubCount×5)
+```
+
+### Invariants
+
+- Le résultat est **purement déterministe** : mêmes fichiers → même score, toujours.
+- Les lignes de commentaires purs (`//`, `*`) sont ignorées pour éviter les faux positifs.
+- **Exit 0** si score = 100 %, **exit 1** sinon — intégrable dans un pipeline CI.
+- `--src <path>` permet de pointer sur un dossier arbitraire (défaut : `./src`).
+
+### Exemple de sortie (codebase propre)
+
+```
+Cadence — Audit de dette technique
+════════════════════════════════════════════════════
+Scanné : 22 fichiers TypeScript dans src/
+
+┌─ Fichiers > 250 lignes ─────────────────────────────
+  ✓  Aucun
+└───────────────────────────────────────────────────
+┌─ Utilisations de `any` ───────────────────────────
+  ✓  Aucun
+└───────────────────────────────────────────────────
+┌─ Marqueurs TODO / FIXME ──────────────────────────
+  ✓  Aucun
+└───────────────────────────────────────────────────
+┌─ Fonctions vides / stubs ─────────────────────────
+  ✓  Aucun
+└───────────────────────────────────────────────────
+
+════════════════════════════════════════════════════
+Score de santé : 100%  [████████████████████]  ✓
+Aucune violation détectée — codebase propre.
+════════════════════════════════════════════════════
+```
+
+### Intégration future
+
+- Ajouter en hook pre-commit via `package.json` scripts
+- Étendre aux fichiers `.js` pour détecter les résidus non-typés
+- Détecter les imports circulaires (catégorie 5)
+
+---
+
+## Récapitulatif des skills
 
 | Skill | Description | Statut |
 |---|---|---|
 | `calculate-splits` | Splits et allure cible | ✅ Implémenté |
-| `calculate-zones` | Zones d'allure à partir de VMA ou allure seuil | Prévu J3 |
-| `export-sessions` | Export CSV/JSON des sessions filtrées | Prévu J3 |
+| `audit-dette` | Scanner de dette technique avec score de santé | ✅ Implémenté |
+| `calculate-zones` | Zones d'allure à partir de VMA ou allure seuil | Prévu J4 |
+| `export-sessions` | Export CSV/JSON des sessions filtrées | Prévu J4 |
 | `calculate-trimp` | Charge d'entraînement méthode TRIMP (avec FC) | Prévu J4 |
