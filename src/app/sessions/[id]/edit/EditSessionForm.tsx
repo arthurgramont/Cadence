@@ -2,14 +2,10 @@
 
 import { useActionState } from 'react'
 import { editSessionAction, type ActionState } from '@/lib/actions'
+import { inputClass, selectClass, FormField } from '@/components/ui/form'
 import Link from 'next/link'
 
 const initialState: ActionState = {}
-
-const inputClass =
-  'w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-500'
-const selectClass =
-  'w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-500'
 
 interface Session {
   id: string
@@ -26,11 +22,6 @@ interface GearOption {
   name: string
 }
 
-/**
- * Formulaire d'édition de session.
- * Les defaultValue sont pré-remplis depuis la session existante (props serveur).
- * La durée est affichée en minutes (stockée en secondes en base).
- */
 export function EditSessionForm({
   session,
   gearOptions,
@@ -49,84 +40,52 @@ export function EditSessionForm({
       )}
 
       <form action={formAction} className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        {/* ID caché — transmis à l'action pour identifier la session */}
         <input type="hidden" name="id" value={session.id} />
 
-        <Field label="Sport">
+        <FormField label="Sport">
           <select name="sportType" required defaultValue={session.sportType} className={selectClass}>
             <option value="run">Course à pied</option>
             <option value="bike">Vélo</option>
             <option value="swim">Natation</option>
           </select>
-        </Field>
+        </FormField>
 
-        <Field label="Date">
+        <FormField label="Date">
+          <input type="date" name="date" required defaultValue={session.date} className={inputClass} />
+        </FormField>
+
+        <FormField label="Durée (minutes)">
           <input
-            type="date"
-            name="date"
-            required
-            defaultValue={session.date}
-            className={inputClass}
+            type="number" name="duration" required min={1} step={1}
+            defaultValue={Math.round(session.duration / 60)} className={inputClass}
           />
-        </Field>
+        </FormField>
 
-        <Field label="Durée (minutes)">
+        <FormField label="Distance (km)">
           <input
-            type="number"
-            name="duration"
-            required
-            min={1}
-            step={1}
-            defaultValue={Math.round(session.duration / 60)}
-            className={inputClass}
+            type="number" name="distance" required min={0.01} step={0.01}
+            defaultValue={session.distance} className={inputClass}
           />
-        </Field>
+        </FormField>
 
-        <Field label="Distance (km)">
+        <FormField label="RPE (1–10)">
           <input
-            type="number"
-            name="distance"
-            required
-            min={0.01}
-            step={0.01}
-            defaultValue={session.distance}
-            className={inputClass}
+            type="number" name="rpe" required min={1} max={10} step={1}
+            defaultValue={session.rpe} className={inputClass}
           />
-        </Field>
+        </FormField>
 
-        <Field label="RPE (1–10)">
-          <input
-            type="number"
-            name="rpe"
-            required
-            min={1}
-            max={10}
-            step={1}
-            defaultValue={session.rpe}
-            className={inputClass}
-          />
-        </Field>
-
-        <Field label="Matériel utilisé">
-          <select
-            name="gearId"
-            defaultValue={session.gearId ?? ''}
-            className={selectClass}
-          >
+        <FormField label="Matériel utilisé">
+          <select name="gearId" defaultValue={session.gearId ?? ''} className={selectClass}>
             <option value="">Aucun</option>
             {gearOptions.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
+              <option key={g.id} value={g.id}>{g.name}</option>
             ))}
           </select>
-        </Field>
+        </FormField>
 
         <div className="col-span-2 sm:col-span-3 flex items-center justify-between pt-2">
-          <Link
-            href="/sessions"
-            className="text-sm text-slate-400 hover:text-slate-200 transition-colors"
-          >
+          <Link href="/sessions" className="text-sm text-slate-400 hover:text-slate-200 transition-colors">
             ← Annuler
           </Link>
           <button
@@ -139,14 +98,5 @@ export function EditSessionForm({
         </div>
       </form>
     </section>
-  )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-xs text-slate-400 mb-1.5">{label}</label>
-      {children}
-    </div>
   )
 }

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { SessionForm } from './SessionForm'
 import { deleteSessionAction } from '@/lib/actions'
 import { DeleteConfirmButton } from '@/components/DeleteConfirmButton'
+import { SportBadge } from '@/components/SportBadge'
 
 /**
  * Page Sessions — Server Component.
@@ -79,18 +80,3 @@ export default async function SessionsPage() {
   )
 }
 
-function SportBadge({ sport }: { sport: string }) {
-  const styles: Record<string, string> = {
-    swim: 'bg-blue-900/60 text-blue-300',
-    bike: 'bg-yellow-900/60 text-yellow-300',
-    run: 'bg-green-900/60 text-green-300',
-  }
-  const labels: Record<string, string> = { swim: 'Natation', bike: 'Vélo', run: 'Course' }
-  return (
-    <span
-      className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${styles[sport] ?? 'bg-slate-800 text-slate-300'}`}
-    >
-      {labels[sport] ?? sport}
-    </span>
-  )
-}

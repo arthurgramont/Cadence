@@ -12,7 +12,9 @@ export type NotificationState = {
  *   WEBHOOK_URL — URL du destinataire (ex: Slack, Discord, n8n, Make).
  *                 Si absente, l'action retourne une erreur sans crash.
  *
- * Payload envoyé : { text: string, source: string }
+ * Payload envoyé : { text: string, content: string, source: string }
+ *   – text    : champ attendu par Slack / Integromat
+ *   – content : champ attendu par Discord
  */
 export async function sendSplitsNotification(
   _prevState: NotificationState,
@@ -32,7 +34,7 @@ export async function sendSplitsNotification(
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: markdown, source: 'Cadence — Calculateur de splits' }),
+      body: JSON.stringify({ text: markdown, content: markdown, source: 'Cadence — Calculateur de splits' }),
     })
 
     if (!response.ok) {

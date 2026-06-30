@@ -7,12 +7,32 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { type ActionState, validateDuration, validateRpe, validateDistance } from './shared'
 
-// ─── CREATE ───────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+type GearOp = { gearId: string; delta: number }
 
 /**
- * Insère une session et incrémente gear.distanceCumulated dans la même transaction.
- * Charge = durationMin × RPE (méthode Foster).
+ * Calcule les opérations de mise à jour du kilométrage gear après modification d'une session.
+ * Gère les 4 cas : même gear (delta), gear changé, gear retiré, gear ajouté.
  */
+function gearDeltaOps(
+  oldGearId: string | null,
+  newGearId: string | null,
+  oldDistance: number,
+  newDistance: number,
+): GearOp[] {
+  if (oldGearId === newGearId) {
+    if (!newGearId || newDistance === oldDistance) return []
+    return [{ gearId: newGearId, delta: newDistance - oldDistance }]
+  }
+  const ops: GearOp[] = []
+  if (oldGearId) ops.push({ gearId: oldGearId, delta: -oldDistance })
+  if (newGearId) ops.push({ gearId: newGearId, delta: newDistance })
+  return ops
+}
+
+// ─── CREATE ───────────────────────────────────────────────────────────────────
+
 export async function addSessionAction(
   _prevState: ActionState,
   formData: FormData,
@@ -44,7 +64,6 @@ export async function addSessionAction(
         gearId,
         raceGoalId: null,
       })
-
       if (gearId) {
         await tx
           .update(gear)
@@ -63,15 +82,6 @@ export async function addSessionAction(
 
 // ─── UPDATE ───────────────────────────────────────────────────────────────────
 
-/**
- * Met à jour une session et recalcule gear.distanceCumulated de façon atomique.
- *
- * Cas couverts :
- *   – même gear, distance changée  → delta = newDist - oldDist
- *   – gear changé                  → décrémente l'ancien, incrémente le nouveau
- *   – gear supprimé (→ null)       → décrémente l'ancien
- *   – gear ajouté (null → id)      → incrémente le nouveau
- */
 export async function editSessionAction(
   _prevState: ActionState,
   formData: FormData,
@@ -93,8 +103,6 @@ export async function editSessionAction(
   const [existing] = await db.select().from(sessions).where(eq(sessions.id, id)).limit(1)
   if (!existing) return { error: 'Session introuvable.' }
 
-  const oldGearId = existing.gearId
-  const oldDistance = existing.distance
   const calculatedLoad = durationMin * rpe
 
   try {
@@ -104,27 +112,11 @@ export async function editSessionAction(
         .set({ sportType, date, duration: durationMin * 60, distance: newDistance, rpe, calculatedLoad, gearId: newGearId })
         .where(eq(sessions.id, id))
 
-      if (oldGearId === newGearId) {
-        if (newGearId && newDistance !== oldDistance) {
-          const delta = newDistance - oldDistance
-          await tx
-            .update(gear)
-            .set({ distanceCumulated: sql`max(0.0, ${gear.distanceCumulated} + ${delta})` })
-            .where(eq(gear.id, newGearId))
-        }
-      } else {
-        if (oldGearId) {
-          await tx
-            .update(gear)
-            .set({ distanceCumulated: sql`max(0.0, ${gear.distanceCumulated} - ${oldDistance})` })
-            .where(eq(gear.id, oldGearId))
-        }
-        if (newGearId) {
-          await tx
-            .update(gear)
-            .set({ distanceCumulated: sql`${gear.distanceCumulated} + ${newDistance}` })
-            .where(eq(gear.id, newGearId))
-        }
+      for (const op of gearDeltaOps(existing.gearId, newGearId, existing.distance, newDistance)) {
+        await tx
+          .update(gear)
+          .set({ distanceCumulated: sql`max(0.0, ${gear.distanceCumulated} + ${op.delta})` })
+          .where(eq(gear.id, op.gearId))
       }
     })
   } catch (err) {
@@ -138,10 +130,6 @@ export async function editSessionAction(
 
 // ─── DELETE ───────────────────────────────────────────────────────────────────
 
-/**
- * Supprime une session et décrémente gear.distanceCumulated dans la même transaction.
- * max(0.0, ...) protège contre un compteur négatif en cas de données incohérentes.
- */
 export async function deleteSessionAction(formData: FormData): Promise<void> {
   const id = formData.get('id') as string
   if (!id) return
@@ -152,7 +140,6 @@ export async function deleteSessionAction(formData: FormData): Promise<void> {
   try {
     await db.transaction(async (tx) => {
       await tx.delete(sessions).where(eq(sessions.id, id))
-
       if (existing.gearId) {
         await tx
           .update(gear)

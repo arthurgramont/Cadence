@@ -2,6 +2,7 @@ import { db } from '@/db'
 import { sessions, gear } from '@/db/schema'
 import { gte } from 'drizzle-orm'
 import Link from 'next/link'
+import { SportBadge } from '@/components/SportBadge'
 
 // ─── Seuils d'alerte (constantes métier — ne pas hardcoder ailleurs) ──────────
 
@@ -191,19 +192,5 @@ function StatCard({ label, value, unit, color }: { label: string; value: number;
       <p className={`text-3xl font-bold tabular-nums ${color}`}>{value}</p>
       <p className="text-xs text-slate-600 mt-1">{unit}</p>
     </div>
-  )
-}
-
-function SportBadge({ sport }: { sport: string }) {
-  const styles: Record<string, string> = {
-    swim: 'bg-blue-900/60 text-blue-300',
-    bike: 'bg-yellow-900/60 text-yellow-300',
-    run: 'bg-green-900/60 text-green-300',
-  }
-  const labels: Record<string, string> = { swim: 'Natation', bike: 'Vélo', run: 'Course' }
-  return (
-    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${styles[sport] ?? 'bg-slate-800 text-slate-300'}`}>
-      {labels[sport] ?? sport}
-    </span>
   )
 }

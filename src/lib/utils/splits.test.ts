@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calculateSplits, formatTime, formatPace } from './splits'
+import { calculateSplits, formatTime, formatPace, formatSplitsMarkdown } from './splits'
 
 // ─── calculateSplits ──────────────────────────────────────────────────────────
 
@@ -207,5 +207,43 @@ describe('formatPace', () => {
   it('arrondit la partie secondes', () => {
     expect(formatPace(239.6)).toBe('4:00')
     expect(formatPace(239.4)).toBe('3:59')
+  })
+})
+
+// ─── formatSplitsMarkdown ─────────────────────────────────────────────────────
+
+describe('formatSplitsMarkdown', () => {
+  it('contient l\'en-tête, l\'allure et le temps cible', () => {
+    const result = calculateSplits(10, 2400)
+    const md = formatSplitsMarkdown(result)
+    expect(md).toContain("## Plan d'allures — 10 km")
+    expect(md).toContain('| Allure cible | 4:00 /km |')
+    expect(md).toContain('| Temps cible | 40:00 |')
+  })
+
+  it('contient les en-têtes du tableau de splits avec séparateurs', () => {
+    const md = formatSplitsMarkdown(calculateSplits(5, 1200))
+    expect(md).toContain('| Km | Split | Passage |')
+    expect(md).toContain('|---|---|---|')
+  })
+  it('contient une ligne par split numérotée et le passage final en gras', () => {
+    const result = calculateSplits(10, 2400)
+    const md = formatSplitsMarkdown(result)
+    expect(md).toContain('| 1 |')
+    expect(md).toContain('| 10 |')
+    expect(md).toContain('**40:00**')
+  })
+
+  it('marque les splits partiels avec *(partiel)*', () => {
+    expect(formatSplitsMarkdown(calculateSplits(10.5, 2520))).toContain('*(partiel)*')
+  })
+  it('génère exactement autant de lignes de données que de splits', () => {
+    const result = calculateSplits(5, 1200)
+    const md = formatSplitsMarkdown(result)
+    const dataRows = md.split('\n').filter(
+      (l) => l.startsWith('|') && !l.startsWith('|---') && !l.includes('Km')
+        && !l.includes('Allure') && !l.includes('Propriété') && !l.includes('Temps cible'),
+    )
+    expect(dataRows).toHaveLength(5)
   })
 })

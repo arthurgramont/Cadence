@@ -2,20 +2,10 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { addGearAction, type ActionState } from '@/lib/actions'
+import { inputClass, selectClass, FormField } from '@/components/ui/form'
+import { GEAR_TYPES } from '@/lib/constants/gear'
 
 const initialState: ActionState = {}
-
-const inputClass =
-  'w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-500 placeholder:text-slate-500'
-const selectClass =
-  'w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-500'
-
-const GEAR_TYPES = [
-  { value: 'shoes', label: 'Chaussures de course' },
-  { value: 'bike', label: 'Vélo' },
-  { value: 'wetsuit', label: 'Combinaison' },
-  { value: 'helmet', label: 'Casque' },
-]
 
 export function GearForm() {
   const [state, formAction, isPending] = useActionState(addGearAction, initialState)
@@ -45,17 +35,11 @@ export function GearForm() {
       )}
 
       <form ref={formRef} action={formAction} className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Field label="Nom">
-          <input
-            type="text"
-            name="name"
-            required
-            placeholder="Nike Vaporfly Next%"
-            className={inputClass}
-          />
-        </Field>
+        <FormField label="Nom">
+          <input type="text" name="name" required placeholder="Nike Vaporfly Next%" className={inputClass} />
+        </FormField>
 
-        <Field label="Type">
+        <FormField label="Type">
           <select
             name="type"
             required
@@ -64,34 +48,23 @@ export function GearForm() {
             className={selectClass}
           >
             {GEAR_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
+              <option key={t.value} value={t.value}>{t.label}</option>
             ))}
           </select>
-        </Field>
+        </FormField>
 
-        <Field label="Distance max (km)">
-          <input
-            type="number"
-            name="distanceMax"
-            required
-            min={1}
-            step={1}
-            placeholder="800"
-            className={inputClass}
-          />
-        </Field>
+        <FormField label="Distance max (km)">
+          <input type="number" name="distanceMax" required min={1} step={1} placeholder="800" className={inputClass} />
+        </FormField>
 
-        <Field label="Date d'achat (optionnel)">
+        <FormField label="Date d'achat (optionnel)">
           <input type="date" name="purchaseDate" className={inputClass} />
-        </Field>
+        </FormField>
 
-        {/* Champ révision visible uniquement pour les vélos */}
         {selectedType === 'bike' && (
-          <Field label="Dernière révision (optionnel)">
+          <FormField label="Dernière révision (optionnel)">
             <input type="date" name="lastMaintenanceDate" className={inputClass} />
-          </Field>
+          </FormField>
         )}
 
         <div className="sm:col-span-3 flex items-center justify-between pt-2">
@@ -108,14 +81,5 @@ export function GearForm() {
         </div>
       </form>
     </section>
-  )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-xs text-slate-400 mb-1.5">{label}</label>
-      {children}
-    </div>
   )
 }
