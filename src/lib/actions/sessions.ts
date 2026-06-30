@@ -64,12 +64,11 @@ export async function addSessionAction(
         gearId,
         raceGoalId: null,
       })
-      if (gearId) {
-        await tx
-          .update(gear)
-          .set({ distanceCumulated: sql`${gear.distanceCumulated} + ${distance}` })
-          .where(eq(gear.id, gearId))
-      }
+      if (!gearId) return
+      await tx
+        .update(gear)
+        .set({ distanceCumulated: sql`${gear.distanceCumulated} + ${distance}` })
+        .where(eq(gear.id, gearId))
     })
   } catch (err) {
     console.error('[addSessionAction]', err)
@@ -112,12 +111,13 @@ export async function editSessionAction(
         .set({ sportType, date, duration: durationMin * 60, distance: newDistance, rpe, calculatedLoad, gearId: newGearId })
         .where(eq(sessions.id, id))
 
-      for (const op of gearDeltaOps(existing.gearId, newGearId, existing.distance, newDistance)) {
-        await tx
-          .update(gear)
-          .set({ distanceCumulated: sql`max(0.0, ${gear.distanceCumulated} + ${op.delta})` })
-          .where(eq(gear.id, op.gearId))
-      }
+      await Promise.all(
+        gearDeltaOps(existing.gearId, newGearId, existing.distance, newDistance).map((op) =>
+          tx.update(gear)
+            .set({ distanceCumulated: sql`max(0.0, ${gear.distanceCumulated} + ${op.delta})` })
+            .where(eq(gear.id, op.gearId))
+        ),
+      )
     })
   } catch (err) {
     console.error('[editSessionAction]', err)
@@ -140,12 +140,11 @@ export async function deleteSessionAction(formData: FormData): Promise<void> {
   try {
     await db.transaction(async (tx) => {
       await tx.delete(sessions).where(eq(sessions.id, id))
-      if (existing.gearId) {
-        await tx
-          .update(gear)
-          .set({ distanceCumulated: sql`max(0.0, ${gear.distanceCumulated} - ${existing.distance})` })
-          .where(eq(gear.id, existing.gearId))
-      }
+      if (!existing.gearId) return
+      await tx
+        .update(gear)
+        .set({ distanceCumulated: sql`max(0.0, ${gear.distanceCumulated} - ${existing.distance})` })
+        .where(eq(gear.id, existing.gearId))
     })
   } catch (err) {
     console.error('[deleteSessionAction]', err)

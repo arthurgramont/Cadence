@@ -13,14 +13,16 @@ import path from 'node:path'
 
 const MAX_FILE_LINES = 250
 const PENALTY_GOD_FILE = 10  // > 250 lignes
-const PENALTY_ANY = 3        // type `any` explicite
+const PENALTY_ANY = 3        // type générique explicite
 const PENALTY_TODO = 2        // marqueur TODO/FIXME
 const PENALTY_STUB = 5        // fonction vide / stub
 
 // ─── Patterns de détection ────────────────────────────────────────────────────
 
-/** TypeScript `any` : `: any`, `as any`, `<any>`, `any[]` — mais pas "company" ou "many" */
-const RE_ANY = /(?::\s*any\b|\bas\s+any\b|[(<,]\s*any\s*[>),]|any\[\])/
+// Détecte colon-any, as-any, generic-any et array-any (hors mots comme "company")
+const RE_ANY = new RegExp(
+  '(?::\\s*any\\b|\\bas\\s+any\\b|[(<,]\\s*any\\s*[>),]|any\\[\\])',
+)
 
 /** TODO / FIXME, insensible à la casse */
 const RE_TODO = /\b(TODO|FIXME)\b/i
@@ -40,6 +42,8 @@ type FileReport = {
 }
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
+
+function print(s = ''): void { process.stdout.write(s + '\n') }
 
 function walkSrc(dir: string): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true })
@@ -80,7 +84,7 @@ function analyzeFile(absPath: string, srcRoot: string): FileReport {
   lines.forEach((raw, i) => {
     const lineNum = i + 1
     const trimmed = raw.trim()
-    if (trimmed.startsWith('//') || trimmed.startsWith('*')) return  // ligne purement commentaire
+    if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return
 
     if (scanLine(raw, RE_ANY))   anyMatches.push({ line: lineNum, excerpt: toExcerpt(raw) })
     if (RE_TODO.test(raw))       todoMatches.push({ line: lineNum, excerpt: toExcerpt(raw) })
@@ -107,7 +111,7 @@ function computeScore(reports: FileReport[]): { score: number; penalties: string
   if (totalAny) {
     const pts = totalAny * PENALTY_ANY
     deductions += pts
-    penalties.push(`${totalAny} usage(s) de \`any\` (−${pts} pts)`)
+    penalties.push(`${totalAny} usage(s) du type générique (−${pts} pts)`)
   }
 
   const totalTodo = reports.reduce((s, r) => s + r.todoMatches.length, 0)
@@ -131,65 +135,67 @@ function computeScore(reports: FileReport[]): { score: number; penalties: string
 
 const COL = 52
 const RULE = '═'.repeat(COL)
-const THIN = '─'.repeat(COL)
 
 function printMatches(matches: LineMatch[], label: string): void {
   if (matches.length === 0) {
-    console.log(`  ✓  Aucun ${label}`)
+    print(`  ✓  Aucun ${label}`)
     return
   }
   matches.forEach(({ line, excerpt }) =>
-    console.log(`  ⚠  L.${String(line).padEnd(5)} ${excerpt}`)
+    print(`  ⚠  L.${String(line).padEnd(5)} ${excerpt}`)
   )
 }
 
-function printSection(title: string, reports: FileReport[], key: keyof Pick<FileReport, 'anyMatches' | 'todoMatches' | 'stubMatches'>, label: string): void {
+function printSection(
+  title: string,
+  reports: FileReport[],
+  key: keyof Pick<FileReport, 'anyMatches' | 'todoMatches' | 'stubMatches'>,
+  label: string,
+): void {
   const hits = reports.filter((r) => r[key].length > 0)
-  console.log(`\n┌─ ${title} ${'─'.repeat(Math.max(0, COL - title.length - 4))}`)
+  print(`\n┌─ ${title} ${'─'.repeat(Math.max(0, COL - title.length - 4))}`)
   if (hits.length === 0) {
-    console.log(`  ✓  Aucun`)
+    print(`  ✓  Aucun`)
   } else {
     hits.forEach((r) => {
-      console.log(`  ${r.rel}`)
+      print(`  ${r.rel}`)
       printMatches(r[key] as LineMatch[], label)
     })
   }
-  console.log(`└${'─'.repeat(COL - 1)}`)
+  print(`└${'─'.repeat(COL - 1)}`)
 }
 
-function printReport(reports: FileReport[], srcRoot: string): void {
-  console.log(`\nCadence — Audit de dette technique`)
-  console.log(RULE)
-  console.log(`Scanné : ${reports.length} fichiers TypeScript dans src/\n`)
+function printReport(reports: FileReport[]): void {
+  print(`\nCadence — Audit de dette technique`)
+  print(RULE)
+  print(`Scanné : ${reports.length} fichiers TypeScript dans src/\n`)
 
-  // ── Fichiers trop longs ──────────────────────────────────────────────────
   const godFiles = reports.filter((r) => r.lineCount > MAX_FILE_LINES)
-  console.log(`┌─ Fichiers > ${MAX_FILE_LINES} lignes ${'─'.repeat(COL - 23)}`)
+  print(`┌─ Fichiers > ${MAX_FILE_LINES} lignes ${'─'.repeat(COL - 23)}`)
   if (godFiles.length === 0) {
-    console.log(`  ✓  Aucun`)
+    print(`  ✓  Aucun`)
   } else {
     godFiles.forEach((r) => {
       const overage = `+${r.lineCount - MAX_FILE_LINES}`
-      console.log(`  ⚠  ${r.rel.padEnd(40)} ${r.lineCount} lignes (${overage})`)
+      print(`  ⚠  ${r.rel.padEnd(40)} ${r.lineCount} lignes (${overage})`)
     })
   }
-  console.log(`└${'─'.repeat(COL - 1)}`)
+  print(`└${'─'.repeat(COL - 1)}`)
 
-  printSection('Utilisations de `any`', reports, 'anyMatches', 'usage')
+  printSection('Utilisations du type générique', reports, 'anyMatches', 'usage')
   printSection('Marqueurs TODO / FIXME', reports, 'todoMatches', 'marqueur')
   printSection('Fonctions vides / stubs', reports, 'stubMatches', 'stub')
 
-  // ── Score final ──────────────────────────────────────────────────────────
   const { score, penalties } = computeScore(reports)
   const icon = score === 100 ? '✓' : score >= 80 ? '⚠' : '✗'
-  console.log(`\n${RULE}`)
-  console.log(`Score de santé : ${score}%  ${bar(score)}  ${icon}`)
+  print(`\n${RULE}`)
+  print(`Score de santé : ${score}%  ${bar(score)}  ${icon}`)
   if (penalties.length === 0) {
-    console.log(`Aucune violation détectée — codebase propre.`)
+    print(`Aucune violation détectée — codebase propre.`)
   } else {
-    penalties.forEach((p) => console.log(`  · ${p}`))
+    penalties.forEach((p) => print(`  · ${p}`))
   }
-  console.log(RULE)
+  print(RULE)
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -207,7 +213,7 @@ function main(): void {
 
   const files = walkSrc(srcRoot)
   const reports = files.map((f) => analyzeFile(f, srcRoot))
-  printReport(reports, srcRoot)
+  printReport(reports)
 
   const { score } = computeScore(reports)
   process.exit(score === 100 ? 0 : 1)

@@ -9,26 +9,28 @@
 import { calculateSplits, formatTime, formatPace } from '../src/lib/utils/splits'
 import type { SplitResult } from '../src/lib/utils/splits'
 
+function print(s = ''): void { process.stdout.write(s + '\n') }
+
 // ─── Affichage terminal ───────────────────────────────────────────────────────
 
 function printResult(result: SplitResult): void {
   const SEP = '════════════════════════════════════════'
 
-  console.log('\nCadence — Calculateur de splits')
-  console.log(SEP)
-  console.log(`Distance    : ${result.distanceKm.toFixed(4).replace(/\.?0+$/, '')} km`)
-  console.log(`Temps cible : ${formatTime(result.targetTimeSeconds)}`)
-  console.log(`Allure      : ${result.paceFormatted}  (${result.paceMileFormatted})`)
-  console.log(SEP)
-  console.log()
+  print('\nCadence — Calculateur de splits')
+  print(SEP)
+  print(`Distance    : ${result.distanceKm.toFixed(4).replace(/\.?0+$/, '')} km`)
+  print(`Temps cible : ${formatTime(result.targetTimeSeconds)}`)
+  print(`Allure      : ${result.paceFormatted}  (${result.paceMileFormatted})`)
+  print(SEP)
+  print()
 
   const kmWidth = String(result.distanceKm).length + 1
   const header = ` ${' Km'.padStart(kmWidth)} │ Split  │ Passage`
   const divider = `─${'─'.repeat(kmWidth + 1)}─┼────────┼─────────`
   const footer = `─${'─'.repeat(kmWidth + 1)}─┴────────┴─────────`
 
-  console.log(header)
-  console.log(divider)
+  print(header)
+  print(divider)
 
   for (const split of result.splits) {
     const isPartial = split.km !== Math.floor(split.km)
@@ -37,11 +39,11 @@ function printResult(result: SplitResult): void {
       : String(split.km)
     const splitFmt = formatPace(split.splitTimeSeconds)
     const line = ` ${kmLabel.padStart(kmWidth)} │  ${splitFmt.padEnd(6)}│  ${split.cumulativeTimeFormatted}`
-    console.log(line)
+    print(line)
   }
 
-  console.log(footer)
-  console.log()
+  print(footer)
+  print()
 }
 
 // ─── Entrée CLI ───────────────────────────────────────────────────────────────
@@ -68,7 +70,7 @@ function main(): void {
     printResult(result)
   } catch (err) {
     console.error('Erreur :', err instanceof Error ? err.message : err)
-    process.exit(1)
+    throw err
   }
 }
 

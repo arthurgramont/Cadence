@@ -30,21 +30,22 @@ export async function sendSplitsNotification(
     return { status: 'error', message: "Contenu du plan d'allures manquant." }
   }
 
+  let response: Response
   try {
-    const response = await fetch(webhookUrl, {
+    response = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: markdown, content: markdown, source: 'Cadence — Calculateur de splits' }),
     })
-
-    if (!response.ok) {
-      console.error('[sendSplitsNotification] HTTP', response.status, webhookUrl)
-      return { status: 'error', message: `Le webhook a répondu avec le statut ${response.status}.` }
-    }
-
-    return { status: 'success', message: "Plan d'allures exporté avec succès." }
   } catch (err) {
     console.error('[sendSplitsNotification]', err)
     return { status: 'error', message: "Erreur réseau. Vérifiez l'URL du webhook." }
   }
+
+  if (!response.ok) {
+    console.error('[sendSplitsNotification] HTTP', response.status, webhookUrl)
+    return { status: 'error', message: `Le webhook a répondu avec le statut ${response.status}.` }
+  }
+
+  return { status: 'success', message: "Plan d'allures exporté avec succès." }
 }
