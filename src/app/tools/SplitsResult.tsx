@@ -1,17 +1,29 @@
 'use client'
 
-import { formatTime, formatPace } from '@/lib/utils/splits'
+import { useActionState } from 'react'
+import { formatTime, formatPace, formatSplitsMarkdown } from '@/lib/utils/splits'
 import type { SplitResult } from '@/lib/utils/splits'
+import { sendSplitsNotification, type NotificationState } from '@/lib/actions'
+
+const initialNotifState: NotificationState = { status: 'idle' }
 
 export function SplitsResult({ result }: { result: SplitResult }) {
+  const [notifState, notifAction, isNotifPending] = useActionState(
+    sendSplitsNotification,
+    initialNotifState,
+  )
+  const markdown = formatSplitsMarkdown(result)
+
   return (
     <section className="space-y-4">
+      {/* Résumé */}
       <div className="grid grid-cols-3 gap-3">
         <SummaryCard label="Allure" value={result.paceFormatted} />
         <SummaryCard label="Allure (mile)" value={result.paceMileFormatted} />
         <SummaryCard label={`${result.distanceKm} km`} value={formatTime(result.targetTimeSeconds)} />
       </div>
 
+      {/* Tableau des splits */}
       <div className="bg-slate-900 rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-800">
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
@@ -68,8 +80,35 @@ export function SplitsResult({ result }: { result: SplitResult }) {
             </tbody>
           </table>
         </div>
+
+        {/* Bouton export */}
+        <div className="px-4 py-3 border-t border-slate-800 flex items-center justify-between gap-4">
+          <NotifFeedback state={notifState} />
+          <form action={notifAction}>
+            <input type="hidden" name="markdown" value={markdown} />
+            <button
+              type="submit"
+              disabled={isNotifPending || notifState.status === 'success'}
+              className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg border transition-colors
+                bg-slate-800 border-slate-700 text-slate-300
+                hover:bg-slate-700 hover:border-slate-500 hover:text-slate-100
+                disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <span>{isNotifPending ? 'Envoi…' : '↗ Exporter le plan d\'allures'}</span>
+            </button>
+          </form>
+        </div>
       </div>
     </section>
+  )
+}
+
+function NotifFeedback({ state }: { state: NotificationState }) {
+  if (state.status === 'idle') return <span />
+  return (
+    <p className={`text-xs ${state.status === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+      {state.message}
+    </p>
   )
 }
 

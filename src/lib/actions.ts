@@ -14,3 +14,5 @@
 export type { ActionState } from './actions/shared'
 export { addSessionAction, editSessionAction, deleteSessionAction } from './actions/sessions'
 export { addGearAction, editGearAction, deleteGearAction } from './actions/gear'
+export { sendSplitsNotification } from './actions/notifications'
+export type { NotificationState } from './actions/notifications'

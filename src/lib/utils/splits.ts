@@ -40,6 +40,33 @@ export function formatPace(secondsPerKm: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+// ─── Formateur Markdown (export webhook) ─────────────────────────────────────
+
+export function formatSplitsMarkdown(result: SplitResult): string {
+  const lines: string[] = [
+    `## Plan d'allures — ${result.distanceKm} km`,
+    ``,
+    `| Propriété | Valeur |`,
+    `|---|---|`,
+    `| Allure cible | ${result.paceFormatted} |`,
+    `| Allure (mile) | ${result.paceMileFormatted} |`,
+    `| Temps cible | ${formatTime(result.targetTimeSeconds)} |`,
+    ``,
+    `| Km | Split | Passage |`,
+    `|---|---|---|`,
+  ]
+
+  for (const split of result.splits) {
+    const isPartial = split.km !== Math.floor(split.km)
+    const kmLabel = isPartial
+      ? `${split.km.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')} *(partiel)*`
+      : String(split.km)
+    lines.push(`| ${kmLabel} | ${formatPace(split.splitTimeSeconds)} /km | **${split.cumulativeTimeFormatted}** |`)
+  }
+
+  return lines.join('\n')
+}
+
 // ─── Calcul principal ─────────────────────────────────────────────────────────
 
 export function calculateSplits(distanceKm: number, targetTimeSeconds: number): SplitResult {

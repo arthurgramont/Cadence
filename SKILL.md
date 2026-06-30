@@ -198,12 +198,95 @@ Aucune violation détectée — codebase propre.
 
 ---
 
+---
+
+## Skill 3 — Notification webhook (`send-splits-notification`)
+
+**Fichier** : `src/lib/actions/notifications.ts`
+**Type** : Next.js Server Action (`'use server'`)
+**Déclencheur** : bouton "↗ Exporter le plan d'allures" sur `/tools`, après calcul des splits
+
+### Objectif
+
+Envoyer un plan d'allures formaté en Markdown vers un webhook externe (Slack, Discord, n8n, Make, Zapier…) via un `fetch` POST JSON, sans crash si la configuration est absente.
+
+### Signature
+
+```typescript
+async function sendSplitsNotification(
+  _prevState: NotificationState,
+  formData: FormData,
+): Promise<NotificationState>
+```
+
+### Types
+
+```typescript
+type NotificationState = {
+  status: 'idle' | 'success' | 'error'
+  message?: string
+}
+```
+
+### Payload envoyé
+
+```json
+{
+  "text": "## Plan d'allures — 10 km\n\n| Propriété | Valeur |…",
+  "source": "Cadence — Calculateur de splits"
+}
+```
+
+Le champ `text` est du Markdown généré par `formatSplitsMarkdown(result)` — fonction pure dans `src/lib/utils/splits.ts`.
+
+### Configuration
+
+| Variable d'environnement | Valeur exemple |
+|---|---|
+| `WEBHOOK_URL` | `https://hooks.slack.com/services/T…` |
+
+À déclarer dans `.env.local` (jamais commité). Si absente, l'action retourne `{ status: 'error' }` sans lancer d'exception.
+
+### Invariants
+
+- **Jamais de crash silencieux** : chaque branche d'erreur retourne un `NotificationState` avec `status: 'error'` et un `message` lisible par l'UI.
+- **Log serveur sur tout `catch`** : `console.error('[sendSplitsNotification]', err)` — traçable dans les logs Next.js.
+- **Sans `WEBHOOK_URL`** : l'application reste fonctionnelle, seul le bouton export est inutilisable (feedback affiché).
+- **Idempotence** : l'action peut être appelée plusieurs fois — aucun état côté serveur, chaque appel est indépendant.
+
+### Flux UI
+
+```
+Utilisateur calcule les splits
+        ↓
+SplitsResult affiche le tableau
+        ↓
+Bouton "↗ Exporter" → form POST (hidden input: markdown)
+        ↓
+sendSplitsNotification() [Server Action]
+        ↓
+  WEBHOOK_URL absent  → { status: 'error', message: '…' }
+  fetch OK            → { status: 'success', message: '…' }
+  fetch erreur HTTP   → { status: 'error', message: 'HTTP 4xx/5xx' }
+  erreur réseau       → { status: 'error', message: 'Erreur réseau' }
+        ↓
+NotifFeedback affiche le message (vert / rouge)
+```
+
+### Intégration future
+
+- Ajouter un second type de notification pour les alertes matériel (`sendGearAlertNotification`)
+- Permettre le choix du format : Markdown / JSON brut / texte enrichi Slack Block Kit
+
+---
+
 ## Récapitulatif des skills
 
-| Skill | Description | Statut |
-|---|---|---|
-| `calculate-splits` | Splits et allure cible | ✅ Implémenté |
-| `audit-dette` | Scanner de dette technique avec score de santé | ✅ Implémenté |
-| `calculate-zones` | Zones d'allure à partir de VMA ou allure seuil | Prévu J4 |
-| `export-sessions` | Export CSV/JSON des sessions filtrées | Prévu J4 |
-| `calculate-trimp` | Charge d'entraînement méthode TRIMP (avec FC) | Prévu J4 |
+| Skill | Type | Description | Statut |
+|---|---|---|---|
+| `calculate-splits` | Script CLI + lib partagée | Splits et allure cible | ✅ Implémenté |
+| `audit-dette` | Script CLI | Scanner de dette technique avec score de santé | ✅ Implémenté |
+| `send-splits-notification` | Server Action | Export Markdown vers webhook externe | ✅ Implémenté |
+| `calculate-zones` | Script CLI | Zones d'allure à partir de VMA ou allure seuil | Prévu J4 |
+| `export-sessions` | Server Action | Export CSV/JSON des sessions filtrées | Prévu J4 |
+| `calculate-trimp` | Lib partagée | Charge d'entraînement méthode TRIMP (avec FC) | Prévu J4 |
