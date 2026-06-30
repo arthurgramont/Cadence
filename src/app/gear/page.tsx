@@ -114,10 +114,10 @@ function GearCard({
       {/* Dates optionnelles */}
       <div className="flex gap-4 mb-4">
         {g.purchaseDate && (
-          <p className="text-xs text-slate-600">Achat : {g.purchaseDate}</p>
+          <p className="text-xs text-slate-400">Achat : {g.purchaseDate}</p>
         )}
         {g.lastMaintenanceDate && (
-          <p className="text-xs text-slate-600">Révision : {g.lastMaintenanceDate}</p>
+          <p className="text-xs text-slate-400">Révision : {g.lastMaintenanceDate}</p>
         )}
       </div>
 

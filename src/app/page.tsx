@@ -3,9 +3,15 @@ import { sessions, gear } from '@/db/schema'
 import { gte } from 'drizzle-orm'
 import Link from 'next/link'
 
+// ─── Seuils d'alerte (constantes métier — ne pas hardcoder ailleurs) ──────────
+
+const WEAR_WARNING_PCT = 0.8   // alerte usure élevée à 80 % du kilométrage max
+const WEAR_CRITICAL_PCT = 1.0  // critique à 100 %
+const SAFETY_MAX_AGE_YEARS = 3 // âge max avant alerte casque/combinaison (normes sécurité)
+const MAINTENANCE_MAX_AGE_YEARS = 1 // délai max sans révision pour un vélo
+
 // ─── Helpers d'alerte temporelle ─────────────────────────────────────────────
 
-/** Retourne true si la date ISO est antérieure au seuil (aujourd'hui - N années). */
 function isOlderThan(dateStr: string | null | undefined, years: number): boolean {
   if (!dateStr) return false
   const threshold = new Date()
@@ -20,13 +26,6 @@ type GearAlert = {
   level: 'critical' | 'warning'
 }
 
-/**
- * Calcule toutes les alertes pour un équipement.
- * Règles :
- *   – km > 80 % du max → usure élevée ; km ≥ 100 % → critique
- *   – casque ou combinaison acheté il y a > 3 ans → alerte sécurité
- *   – vélo sans révision depuis > 1 an (ou jamais) → alerte maintenance
- */
 function getGearAlerts(g: {
   id: string
   name: string
@@ -41,17 +40,17 @@ function getGearAlerts(g: {
   const alerts: GearAlert[] = []
   const pct = g.distanceCumulated / g.distanceMax
 
-  if (pct >= 1) {
+  if (pct >= WEAR_CRITICAL_PCT) {
     alerts.push({ id: g.id, name: g.name, reason: `Kilométrage dépassé (${Math.round(pct * 100)} % du max)`, level: 'critical' })
-  } else if (pct >= 0.8) {
+  } else if (pct >= WEAR_WARNING_PCT) {
     alerts.push({ id: g.id, name: g.name, reason: `Usure élevée (${Math.round(pct * 100)} % du max)`, level: 'warning' })
   }
 
-  if ((g.type === 'helmet' || g.type === 'wetsuit') && isOlderThan(g.purchaseDate, 3)) {
+  if ((g.type === 'helmet' || g.type === 'wetsuit') && isOlderThan(g.purchaseDate, SAFETY_MAX_AGE_YEARS)) {
     alerts.push({ id: g.id, name: g.name, reason: "Achat > 3 ans — vérifier l'état et les normes de sécurité", level: 'warning' })
   }
 
-  if (g.type === 'bike' && (!g.lastMaintenanceDate || isOlderThan(g.lastMaintenanceDate, 1))) {
+  if (g.type === 'bike' && (!g.lastMaintenanceDate || isOlderThan(g.lastMaintenanceDate, MAINTENANCE_MAX_AGE_YEARS))) {
     const label = g.lastMaintenanceDate ? 'Révision > 1 an' : 'Aucune révision enregistrée'
     alerts.push({ id: g.id, name: g.name, reason: label, level: 'warning' })
   }
