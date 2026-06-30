@@ -34,8 +34,9 @@ export function formatTime(totalSeconds: number): string {
 }
 
 export function formatPace(secondsPerKm: number): string {
-  const m = Math.floor(secondsPerKm / 60)
-  const s = Math.round(secondsPerKm % 60)
+  let m = Math.floor(secondsPerKm / 60)
+  let s = Math.round(secondsPerKm % 60)
+  if (s === 60) { m += 1; s = 0 }  // carry: 3:60 → 4:00
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
