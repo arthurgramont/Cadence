@@ -6,8 +6,7 @@
  * La logique de calcul est dans src/lib/utils/splits.ts (partagée avec l'UI).
  */
 
-import { calculateSplits, formatTime, formatPace } from '../src/lib/utils/splits'
-import type { SplitResult } from '../src/lib/utils/splits'
+import { calculateSplits, formatTime, formatPace, type SplitResult } from '../src/lib/utils/splits'
 
 function print(s = ''): void { process.stdout.write(s + '\n') }
 

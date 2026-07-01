@@ -69,8 +69,7 @@ export async function addSessionAction(
   try {
     await db.transaction(async (tx) => {
       await tx.insert(sessions).values(sessionRecord)
-      if (!gearId) return
-      await tx.update(gear).set(incrementGear(distance)).where(eq(gear.id, gearId))
+      if (gearId) await tx.update(gear).set(incrementGear(distance)).where(eq(gear.id, gearId))
     })
   } catch (err) {
     console.error('[addSessionAction]', err)
@@ -135,8 +134,7 @@ export async function deleteSessionAction(formData: FormData): Promise<void> {
   try {
     await db.transaction(async (tx) => {
       await tx.delete(sessions).where(eq(sessions.id, id))
-      if (!existing.gearId) return
-      await tx.update(gear).set(decrementGear(existing.distance)).where(eq(gear.id, existing.gearId))
+      if (existing.gearId) await tx.update(gear).set(decrementGear(existing.distance)).where(eq(gear.id, existing.gearId))
     })
   } catch (err) {
     console.error('[deleteSessionAction]', err)

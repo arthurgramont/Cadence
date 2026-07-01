@@ -6,8 +6,8 @@
  * Retourne exit 0 si score = 100%, exit 1 sinon (intégrable en CI).
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
+import { readdirSync, readFileSync, existsSync } from 'node:fs'
+import { join, resolve, relative } from 'node:path'
 
 // ─── Constantes métier (synchro avec CLAUDE.md) ───────────────────────────────
 
@@ -46,9 +46,9 @@ type FileReport = {
 function print(s = ''): void { process.stdout.write(s + '\n') }
 
 function walkSrc(dir: string): string[] {
-  const entries = fs.readdirSync(dir, { withFileTypes: true })
+  const entries = readdirSync(dir, { withFileTypes: true })
   return entries.flatMap((e) => {
-    const full = path.join(dir, e.name)
+    const full = join(dir, e.name)
     if (e.isDirectory()) return walkSrc(full)
     if (/\.(ts|tsx)$/.test(e.name)) return [full]
     return []
@@ -73,9 +73,9 @@ function bar(score: number, width = 20): string {
 // ─── Analyse d'un fichier ─────────────────────────────────────────────────────
 
 function analyzeFile(absPath: string, srcRoot: string): FileReport {
-  const content = fs.readFileSync(absPath, 'utf-8')
+  const content = readFileSync(absPath, 'utf-8')
   const lines = content.split('\n')
-  const rel = path.relative(srcRoot, absPath)
+  const rel = relative(srcRoot, absPath)
 
   const anyMatches: LineMatch[] = []
   const todoMatches: LineMatch[] = []
@@ -203,10 +203,10 @@ function printReport(reports: FileReport[]): void {
 function main(): void {
   const argIdx = process.argv.indexOf('--src')
   const srcRoot = argIdx !== -1 && process.argv[argIdx + 1]
-    ? path.resolve(process.argv[argIdx + 1])
-    : path.join(process.cwd(), 'src')
+    ? resolve(process.argv[argIdx + 1])
+    : join(process.cwd(), 'src')
 
-  if (!fs.existsSync(srcRoot)) {
+  if (!existsSync(srcRoot)) {
     console.error(`Erreur : dossier introuvable → ${srcRoot}`)
     process.exit(1)
   }
