@@ -31,6 +31,20 @@ function gearDeltaOps(
   return ops
 }
 
+// ─── Helpers gear ─────────────────────────────────────────────────────────────
+
+function incrementGear(distance: number) {
+  return { distanceCumulated: sql`${gear.distanceCumulated} + ${distance}` }
+}
+
+function decrementGear(distance: number) {
+  return { distanceCumulated: sql`max(0.0, ${gear.distanceCumulated} - ${distance})` }
+}
+
+function adjustGear(delta: number) {
+  return { distanceCumulated: sql`max(0.0, ${gear.distanceCumulated} + ${delta})` }
+}
+
 // ─── CREATE ───────────────────────────────────────────────────────────────────
 
 export async function addSessionAction(
@@ -50,25 +64,13 @@ export async function addSessionAction(
   if (err) return { error: err }
 
   const calculatedLoad = durationMin * rpe
+  const sessionRecord = { id: crypto.randomUUID(), sportType, date, duration: durationMin * 60, distance, rpe, calculatedLoad, gearId, raceGoalId: null }
 
   try {
     await db.transaction(async (tx) => {
-      await tx.insert(sessions).values({
-        id: crypto.randomUUID(),
-        sportType,
-        date,
-        duration: durationMin * 60,
-        distance,
-        rpe,
-        calculatedLoad,
-        gearId,
-        raceGoalId: null,
-      })
+      await tx.insert(sessions).values(sessionRecord)
       if (!gearId) return
-      await tx
-        .update(gear)
-        .set({ distanceCumulated: sql`${gear.distanceCumulated} + ${distance}` })
-        .where(eq(gear.id, gearId))
+      await tx.update(gear).set(incrementGear(distance)).where(eq(gear.id, gearId))
     })
   } catch (err) {
     console.error('[addSessionAction]', err)
@@ -104,20 +106,13 @@ export async function editSessionAction(
 
   const calculatedLoad = durationMin * rpe
 
+  const sessionUpdate = { sportType, date, duration: durationMin * 60, distance: newDistance, rpe, calculatedLoad, gearId: newGearId }
+  const deltas = gearDeltaOps(existing.gearId, newGearId, existing.distance, newDistance)
+
   try {
     await db.transaction(async (tx) => {
-      await tx
-        .update(sessions)
-        .set({ sportType, date, duration: durationMin * 60, distance: newDistance, rpe, calculatedLoad, gearId: newGearId })
-        .where(eq(sessions.id, id))
-
-      await Promise.all(
-        gearDeltaOps(existing.gearId, newGearId, existing.distance, newDistance).map((op) =>
-          tx.update(gear)
-            .set({ distanceCumulated: sql`max(0.0, ${gear.distanceCumulated} + ${op.delta})` })
-            .where(eq(gear.id, op.gearId))
-        ),
-      )
+      await tx.update(sessions).set(sessionUpdate).where(eq(sessions.id, id))
+      await Promise.all(deltas.map((op) => tx.update(gear).set(adjustGear(op.delta)).where(eq(gear.id, op.gearId))))
     })
   } catch (err) {
     console.error('[editSessionAction]', err)
@@ -141,10 +136,7 @@ export async function deleteSessionAction(formData: FormData): Promise<void> {
     await db.transaction(async (tx) => {
       await tx.delete(sessions).where(eq(sessions.id, id))
       if (!existing.gearId) return
-      await tx
-        .update(gear)
-        .set({ distanceCumulated: sql`max(0.0, ${gear.distanceCumulated} - ${existing.distance})` })
-        .where(eq(gear.id, existing.gearId))
+      await tx.update(gear).set(decrementGear(existing.distance)).where(eq(gear.id, existing.gearId))
     })
   } catch (err) {
     console.error('[deleteSessionAction]', err)

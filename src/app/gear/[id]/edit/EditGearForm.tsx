@@ -18,6 +18,29 @@ interface GearData {
   status: 'active' | 'retired'
 }
 
+function GearTypeSelect({ value, onChange }: { value: GearData['type']; onChange: (v: GearData['type']) => void }) {
+  return (
+    <FormField label="Type">
+      <select name="type" required value={value} onChange={(e) => onChange(e.target.value as GearData['type'])} className={selectClass}>
+        {GEAR_TYPES.map((t) => (
+          <option key={t.value} value={t.value}>{t.label}</option>
+        ))}
+      </select>
+    </FormField>
+  )
+}
+
+function GearFormActions({ isPending }: { isPending: boolean }) {
+  return (
+    <div className="sm:col-span-2 flex items-center justify-between pt-2">
+      <Link href="/gear" className="text-sm text-slate-400 hover:text-slate-200 transition-colors">← Annuler</Link>
+      <button type="submit" disabled={isPending} className="bg-slate-100 text-slate-800 text-sm font-medium px-5 py-2 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        {isPending ? 'Enregistrement…' : 'Sauvegarder'}
+      </button>
+    </div>
+  )
+}
+
 export function EditGearForm({ gear }: { gear: GearData }) {
   const [state, formAction, isPending] = useActionState(editGearAction, initialState)
   const [selectedType, setSelectedType] = useState(gear.type)
@@ -29,64 +52,30 @@ export function EditGearForm({ gear }: { gear: GearData }) {
           {state.error}
         </div>
       )}
-
       <form action={formAction} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <input type="hidden" name="id" value={gear.id} />
-
         <FormField label="Nom">
           <input type="text" name="name" required defaultValue={gear.name} className={inputClass} />
         </FormField>
-
-        <FormField label="Type">
-          <select
-            name="type"
-            required
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value as GearData['type'])}
-            className={selectClass}
-          >
-            {GEAR_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
-        </FormField>
-
+        <GearTypeSelect value={selectedType} onChange={setSelectedType} />
         <FormField label="Distance max (km)">
-          <input
-            type="number" name="distanceMax" required min={1} step={1}
-            defaultValue={gear.distanceMax} className={inputClass}
-          />
+          <input type="number" name="distanceMax" required min={1} step={1} defaultValue={gear.distanceMax} className={inputClass} />
         </FormField>
-
         <FormField label="Statut">
           <select name="status" defaultValue={gear.status} className={selectClass}>
             <option value="active">En service</option>
             <option value="retired">Retraité</option>
           </select>
         </FormField>
-
         <FormField label="Date d'achat">
           <input type="date" name="purchaseDate" defaultValue={gear.purchaseDate ?? ''} className={inputClass} />
         </FormField>
-
         {selectedType === 'bike' && (
           <FormField label="Dernière révision">
             <input type="date" name="lastMaintenanceDate" defaultValue={gear.lastMaintenanceDate ?? ''} className={inputClass} />
           </FormField>
         )}
-
-        <div className="sm:col-span-2 flex items-center justify-between pt-2">
-          <Link href="/gear" className="text-sm text-slate-400 hover:text-slate-200 transition-colors">
-            ← Annuler
-          </Link>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="bg-slate-100 text-slate-800 text-sm font-medium px-5 py-2 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isPending ? 'Enregistrement…' : 'Sauvegarder'}
-          </button>
-        </div>
+        <GearFormActions isPending={isPending} />
       </form>
     </section>
   )

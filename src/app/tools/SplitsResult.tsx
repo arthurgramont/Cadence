@@ -32,11 +32,55 @@ function SplitRow({ split, isLast }: { split: Split; isLast: boolean }) {
   )
 }
 
-export function SplitsResult({ result }: { result: SplitResult }) {
-  const [notifState, notifAction, isNotifPending] = useActionState(
-    sendSplitsNotification,
-    initialNotifState,
+function SplitsTable({ splits }: { splits: SplitResult['splits'] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-slate-800">
+            <th className="text-left text-xs text-slate-500 font-medium px-4 py-2.5 w-20">Km</th>
+            <th className="text-right text-xs text-slate-500 font-medium px-4 py-2.5">Split</th>
+            <th className="text-right text-xs text-slate-500 font-medium px-4 py-2.5">Passage</th>
+          </tr>
+        </thead>
+        <tbody>
+          {splits.map((split, i) => (
+            <SplitRow key={split.km} split={split} isLast={i === splits.length - 1} />
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
+}
+
+function ExportBar({ notifAction, notifState, isNotifPending, markdown }: {
+  notifAction: (payload: FormData) => void
+  notifState: NotificationState
+  isNotifPending: boolean
+  markdown: string
+}) {
+  return (
+    <div className="px-4 py-3 border-t border-slate-800 flex items-center justify-between gap-4">
+      <NotifFeedback state={notifState} />
+      <form action={notifAction}>
+        <input type="hidden" name="markdown" value={markdown} />
+        <button
+          type="submit"
+          disabled={isNotifPending || notifState.status === 'success'}
+          className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg border transition-colors
+            bg-slate-800 border-slate-700 text-slate-300
+            hover:bg-slate-700 hover:border-slate-500 hover:text-slate-100
+            disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <span>{isNotifPending ? 'Envoi…' : "↗ Exporter le plan d'allures"}</span>
+        </button>
+      </form>
+    </div>
+  )
+}
+
+export function SplitsResult({ result }: { result: SplitResult }) {
+  const [notifState, notifAction, isNotifPending] = useActionState(sendSplitsNotification, initialNotifState)
   const markdown = formatSplitsMarkdown(result)
 
   return (
@@ -46,47 +90,14 @@ export function SplitsResult({ result }: { result: SplitResult }) {
         <SummaryCard label="Allure (mile)" value={result.paceMileFormatted} />
         <SummaryCard label={`${result.distanceKm} km`} value={formatTime(result.targetTimeSeconds)} />
       </div>
-
       <div className="bg-slate-900 rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-800">
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
             Temps de passage — {result.splits.length} splits
           </h2>
         </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-800">
-                <th className="text-left text-xs text-slate-500 font-medium px-4 py-2.5 w-20">Km</th>
-                <th className="text-right text-xs text-slate-500 font-medium px-4 py-2.5">Split</th>
-                <th className="text-right text-xs text-slate-500 font-medium px-4 py-2.5">Passage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.splits.map((split, i) => (
-                <SplitRow key={split.km} split={split} isLast={i === result.splits.length - 1} />
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="px-4 py-3 border-t border-slate-800 flex items-center justify-between gap-4">
-          <NotifFeedback state={notifState} />
-          <form action={notifAction}>
-            <input type="hidden" name="markdown" value={markdown} />
-            <button
-              type="submit"
-              disabled={isNotifPending || notifState.status === 'success'}
-              className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg border transition-colors
-                bg-slate-800 border-slate-700 text-slate-300
-                hover:bg-slate-700 hover:border-slate-500 hover:text-slate-100
-                disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <span>{isNotifPending ? 'Envoi…' : '↗ Exporter le plan d\'allures'}</span>
-            </button>
-          </form>
-        </div>
+        <SplitsTable splits={result.splits} />
+        <ExportBar notifAction={notifAction} notifState={notifState} isNotifPending={isNotifPending} markdown={markdown} />
       </div>
     </section>
   )

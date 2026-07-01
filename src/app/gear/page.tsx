@@ -55,78 +55,63 @@ export default async function GearPage() {
   )
 }
 
-function GearCard({
-  g,
-}: {
-  g: {
-    id: string
-    name: string
-    type: string
-    distanceCumulated: number
-    distanceMax: number
-    status: string
-    purchaseDate: string | null
-    lastMaintenanceDate: string | null
-  }
-}) {
+type GearData = {
+  id: string
+  name: string
+  type: string
+  distanceCumulated: number
+  distanceMax: number
+  status: string
+  purchaseDate: string | null
+  lastMaintenanceDate: string | null
+}
+
+function wearColor(isCritical: boolean, isWorn: boolean) {
+  return isCritical ? 'text-red-400' : isWorn ? 'text-amber-400' : 'text-green-400'
+}
+
+function barColor(isCritical: boolean, isWorn: boolean) {
+  return isCritical ? 'bg-red-500' : isWorn ? 'bg-amber-500' : 'bg-green-500'
+}
+
+function GearWearBar({ pct, isCritical, isWorn }: { pct: number; isCritical: boolean; isWorn: boolean }) {
+  return (
+    <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden mb-2">
+      <div className={`h-full rounded-full transition-all ${barColor(isCritical, isWorn)}`} style={{ width: `${pct}%` }} />
+    </div>
+  )
+}
+
+function GearCard({ g }: { g: GearData }) {
   const pct = Math.min(100, Math.round((g.distanceCumulated / g.distanceMax) * 100))
   const isWorn = pct >= 80
   const isCritical = pct >= 100
 
   return (
     <div className="bg-slate-900 rounded-xl p-4">
-      {/* En-tête : nom + pourcentage */}
       <div className="flex items-start justify-between mb-3">
         <div>
           <p className="font-medium text-slate-100">{g.name}</p>
           <p className="text-xs text-slate-500 mt-0.5">{GEAR_LABELS[g.type] ?? g.type}</p>
         </div>
-        <span
-          className={`text-sm font-bold ${
-            isCritical ? 'text-red-400' : isWorn ? 'text-amber-400' : 'text-green-400'
-          }`}
-        >
-          {pct}%
-        </span>
+        <span className={`text-sm font-bold ${wearColor(isCritical, isWorn)}`}>{pct}%</span>
       </div>
 
-      {/* Barre d'usure */}
-      <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden mb-2">
-        <div
-          className={`h-full rounded-full transition-all ${
-            isCritical ? 'bg-red-500' : isWorn ? 'bg-amber-500' : 'bg-green-500'
-          }`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+      <GearWearBar pct={pct} isCritical={isCritical} isWorn={isWorn} />
 
-      {/* Métriques */}
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-slate-500 tabular-nums">
-          {g.distanceCumulated} / {g.distanceMax} km
-        </p>
+        <p className="text-xs text-slate-500 tabular-nums">{g.distanceCumulated} / {g.distanceMax} km</p>
         {isCritical && <span className="text-xs text-red-400 font-medium">À remplacer</span>}
-        {isWorn && !isCritical && (
-          <span className="text-xs text-amber-400 font-medium">Usure élevée</span>
-        )}
+        {isWorn && !isCritical && <span className="text-xs text-amber-400 font-medium">Usure élevée</span>}
       </div>
 
-      {/* Dates optionnelles */}
       <div className="flex gap-4 mb-4">
-        {g.purchaseDate && (
-          <p className="text-xs text-slate-400">Achat : {g.purchaseDate}</p>
-        )}
-        {g.lastMaintenanceDate && (
-          <p className="text-xs text-slate-400">Révision : {g.lastMaintenanceDate}</p>
-        )}
+        {g.purchaseDate && <p className="text-xs text-slate-400">Achat : {g.purchaseDate}</p>}
+        {g.lastMaintenanceDate && <p className="text-xs text-slate-400">Révision : {g.lastMaintenanceDate}</p>}
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-2 border-t border-slate-800 pt-3">
-        <Link
-          href={`/gear/${g.id}/edit`}
-          className="text-xs text-slate-400 hover:text-slate-200 transition-colors px-2 py-1 rounded hover:bg-slate-800"
-        >
+        <Link href={`/gear/${g.id}/edit`} className="text-xs text-slate-400 hover:text-slate-200 transition-colors px-2 py-1 rounded hover:bg-slate-800">
           Éditer
         </Link>
         <GearDeleteForm gearId={g.id} gearName={g.name} />

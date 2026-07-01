@@ -3,163 +3,116 @@ import { calculateSplits, formatTime, formatPace, formatSplitsMarkdown } from '.
 
 // ─── calculateSplits ──────────────────────────────────────────────────────────
 
-describe('calculateSplits', () => {
+describe('calculateSplits — 10 km en 2400 s (allure 4:00/km)', () => {
+  const result = calculateSplits(10, 2400)
 
-  // ── Distance entière : 10 km / 2400 s (4:00/km exact) ─────────────────────
+  it('retourne la bonne allure en secondes par km', () => {
+    expect(result.paceSecondsPerKm).toBe(240)
+  })
+  it("formate correctement l'allure /km", () => {
+    expect(result.paceFormatted).toBe('4:00 /km')
+  })
+  it('génère exactement 10 splits', () => {
+    expect(result.splits).toHaveLength(10)
+  })
+  it('chaque split a exactement 240 secondes', () => {
+    result.splits.forEach((s) => { expect(s.splitTimeSeconds).toBe(240) })
+  })
+  it('les temps cumulés sont des multiples exacts de 240', () => {
+    result.splits.forEach((s, i) => { expect(s.cumulativeTimeSeconds).toBe((i + 1) * 240) })
+  })
+  it('le dernier split arrive exactement à 2400 s', () => {
+    const last = result.splits[result.splits.length - 1]
+    expect(last.cumulativeTimeSeconds).toBe(2400)
+    expect(last.cumulativeTimeFormatted).toBe('40:00')
+  })
+  it("n'a pas de split partiel", () => {
+    expect(result.lastSplitDistanceKm).toBeNull()
+  })
+  it('les numéros de km sont 1 à 10', () => {
+    result.splits.forEach((s, i) => { expect(s.km).toBe(i + 1) })
+  })
+})
 
-  describe('10 km en 2400 s (allure 4:00/km)', () => {
-    const result = calculateSplits(10, 2400)
+describe('calculateSplits — 10.5 km en 2520 s (split partiel)', () => {
+  const result = calculateSplits(10.5, 2520)
 
-    it('retourne la bonne allure en secondes par km', () => {
-      expect(result.paceSecondsPerKm).toBe(240)
-    })
-
-    it('formate correctement l\'allure /km', () => {
-      expect(result.paceFormatted).toBe('4:00 /km')
-    })
-
-    it('génère exactement 10 splits', () => {
-      expect(result.splits).toHaveLength(10)
-    })
-
-    it('chaque split a exactement 240 secondes', () => {
-      result.splits.forEach((s) => {
-        expect(s.splitTimeSeconds).toBe(240)
-      })
-    })
-
-    it('les temps cumulés sont des multiples exacts de 240', () => {
-      result.splits.forEach((s, i) => {
-        expect(s.cumulativeTimeSeconds).toBe((i + 1) * 240)
-      })
-    })
-
-    it('le dernier split arrive exactement à 2400 s', () => {
-      const last = result.splits[result.splits.length - 1]
-      expect(last.cumulativeTimeSeconds).toBe(2400)
-      expect(last.cumulativeTimeFormatted).toBe('40:00')
-    })
-
-    it('n\'a pas de split partiel', () => {
-      expect(result.lastSplitDistanceKm).toBeNull()
-    })
-
-    it('les numéros de km sont 1 à 10', () => {
-      result.splits.forEach((s, i) => {
-        expect(s.km).toBe(i + 1)
-      })
+  it('génère 11 splits au total (10 complets + 1 partiel)', () => {
+    expect(result.splits).toHaveLength(11)
+  })
+  it('les 10 premiers splits sont des km entiers', () => {
+    result.splits.slice(0, 10).forEach((s, i) => {
+      expect(s.km).toBe(i + 1)
+      expect(s.splitTimeSeconds).toBe(240)
     })
   })
-
-  // ── Distance non entière : 10.5 km / 2520 s (4:00/km) ─────────────────────
-
-  describe('10.5 km en 2520 s (allure 4:00/km, split partiel)', () => {
-    const result = calculateSplits(10.5, 2520)
-
-    it('génère 11 splits au total (10 complets + 1 partiel)', () => {
-      expect(result.splits).toHaveLength(11)
-    })
-
-    it('les 10 premiers splits sont des km entiers', () => {
-      result.splits.slice(0, 10).forEach((s, i) => {
-        expect(s.km).toBe(i + 1)
-        expect(s.splitTimeSeconds).toBe(240)
-      })
-    })
-
-    it('le dernier split est partiel et correspond à 0.5 km', () => {
-      expect(result.lastSplitDistanceKm).toBeCloseTo(0.5, 5)
-    })
-
-    it('le dernier split a un km = 10.5', () => {
-      const last = result.splits[result.splits.length - 1]
-      expect(last.km).toBe(10.5)
-    })
-
-    it('le dernier split dure exactement 0.5 × 240 = 120 s', () => {
-      const last = result.splits[result.splits.length - 1]
-      expect(last.splitTimeSeconds).toBeCloseTo(120, 5)
-    })
-
-    it('le cumul du dernier split est exactement le temps cible (2520 s)', () => {
-      const last = result.splits[result.splits.length - 1]
-      expect(last.cumulativeTimeSeconds).toBe(2520)
-    })
+  it('le dernier split est partiel et correspond à 0.5 km', () => {
+    expect(result.lastSplitDistanceKm).toBeCloseTo(0.5, 5)
   })
-
-  // ── Distance non entière : 21.0975 km (semi-marathon) ─────────────────────
-
-  describe('21.0975 km en 6300 s (~4:59/km, split partiel réel)', () => {
-    const result = calculateSplits(21.0975, 6300)
-
-    it('génère 22 splits au total (21 complets + 1 partiel)', () => {
-      expect(result.splits).toHaveLength(22)
-    })
-
-    it('le split partiel correspond à 0.0975 km', () => {
-      expect(result.lastSplitDistanceKm).toBeCloseTo(0.0975, 3)
-    })
-
-    it('le cumul final est exactement le temps cible (6300 s)', () => {
-      const last = result.splits[result.splits.length - 1]
-      expect(last.cumulativeTimeSeconds).toBe(6300)
-    })
-
-    it('l\'allure est cohérente : paceSecondsPerKm ≈ 298.7 s/km', () => {
-      expect(result.paceSecondsPerKm).toBeCloseTo(6300 / 21.0975, 8)
-    })
+  it('le dernier split a un km = 10.5', () => {
+    expect(result.splits[result.splits.length - 1].km).toBe(10.5)
   })
-
-  // ── Somme des splits = temps cible ────────────────────────────────────────
-
-  describe('invariant : somme des splits = temps cible', () => {
-    it('tient pour un 10 km en 2340 s', () => {
-      const result = calculateSplits(10, 2340)
-      const sum = result.splits.reduce((acc, s) => acc + s.splitTimeSeconds, 0)
-      expect(sum).toBeCloseTo(2340, 5)
-    })
-
-    it('tient pour un 42.195 km en 12600 s', () => {
-      const result = calculateSplits(42.195, 12600)
-      const sum = result.splits.reduce((acc, s) => acc + s.splitTimeSeconds, 0)
-      expect(sum).toBeCloseTo(12600, 3)
-    })
+  it('le dernier split dure exactement 0.5 × 240 = 120 s', () => {
+    expect(result.splits[result.splits.length - 1].splitTimeSeconds).toBeCloseTo(120, 5)
   })
-
-  // ── Inputs invalides (règles métier CLAUDE.md) ────────────────────────────
-
-  describe('validation des inputs invalides', () => {
-    it('lève une erreur si la distance est zéro', () => {
-      expect(() => calculateSplits(0, 2400)).toThrow('strictement positive')
-    })
-
-    it('lève une erreur si la distance est négative', () => {
-      expect(() => calculateSplits(-5, 2400)).toThrow('strictement positive')
-    })
-
-    it('lève une erreur si le temps cible est zéro', () => {
-      expect(() => calculateSplits(10, 0)).toThrow('strictement positif')
-    })
-
-    it('lève une erreur si le temps cible est négatif', () => {
-      expect(() => calculateSplits(10, -60)).toThrow('strictement positif')
-    })
+  it('le cumul du dernier split est exactement le temps cible (2520 s)', () => {
+    expect(result.splits[result.splits.length - 1].cumulativeTimeSeconds).toBe(2520)
   })
+})
 
-  // ── Cas limites ──────────────────────────────────────────────────────────
+describe('calculateSplits — 21.0975 km en 6300 s (semi-marathon)', () => {
+  const result = calculateSplits(21.0975, 6300)
 
-  describe('cas limites', () => {
-    it('distance très courte (0.5 km) génère 1 split partiel, pas de splits entiers', () => {
-      const result = calculateSplits(0.5, 120)
-      expect(result.splits).toHaveLength(1)
-      expect(result.lastSplitDistanceKm).toBeCloseTo(0.5, 5)
-      expect(result.splits[0].cumulativeTimeSeconds).toBe(120)
-    })
+  it('génère 22 splits au total (21 complets + 1 partiel)', () => {
+    expect(result.splits).toHaveLength(22)
+  })
+  it('le split partiel correspond à 0.0975 km', () => {
+    expect(result.lastSplitDistanceKm).toBeCloseTo(0.0975, 3)
+  })
+  it('le cumul final est exactement le temps cible (6300 s)', () => {
+    expect(result.splits[result.splits.length - 1].cumulativeTimeSeconds).toBe(6300)
+  })
+  it("l'allure est cohérente : paceSecondsPerKm ≈ 298.7 s/km", () => {
+    expect(result.paceSecondsPerKm).toBeCloseTo(6300 / 21.0975, 8)
+  })
+})
 
-    it('distance exactement entière ne génère pas de split partiel', () => {
-      expect(calculateSplits(5, 1200).lastSplitDistanceKm).toBeNull()
-      expect(calculateSplits(42, 12600).lastSplitDistanceKm).toBeNull()
-    })
+describe('calculateSplits — invariant : somme des splits = temps cible', () => {
+  it('tient pour un 10 km en 2340 s', () => {
+    const r = calculateSplits(10, 2340)
+    expect(r.splits.reduce((acc, s) => acc + s.splitTimeSeconds, 0)).toBeCloseTo(2340, 5)
+  })
+  it('tient pour un 42.195 km en 12600 s', () => {
+    const r = calculateSplits(42.195, 12600)
+    expect(r.splits.reduce((acc, s) => acc + s.splitTimeSeconds, 0)).toBeCloseTo(12600, 3)
+  })
+})
+
+describe('calculateSplits — validation des inputs invalides', () => {
+  it('lève une erreur si la distance est zéro', () => {
+    expect(() => calculateSplits(0, 2400)).toThrow('strictement positive')
+  })
+  it('lève une erreur si la distance est négative', () => {
+    expect(() => calculateSplits(-5, 2400)).toThrow('strictement positive')
+  })
+  it('lève une erreur si le temps cible est zéro', () => {
+    expect(() => calculateSplits(10, 0)).toThrow('strictement positif')
+  })
+  it('lève une erreur si le temps cible est négatif', () => {
+    expect(() => calculateSplits(10, -60)).toThrow('strictement positif')
+  })
+})
+
+describe('calculateSplits — cas limites', () => {
+  it('distance très courte (0.5 km) génère 1 split partiel', () => {
+    const result = calculateSplits(0.5, 120)
+    expect(result.splits).toHaveLength(1)
+    expect(result.lastSplitDistanceKm).toBeCloseTo(0.5, 5)
+    expect(result.splits[0].cumulativeTimeSeconds).toBe(120)
+  })
+  it('distance exactement entière ne génère pas de split partiel', () => {
+    expect(calculateSplits(5, 1200).lastSplitDistanceKm).toBeNull()
+    expect(calculateSplits(42, 12600).lastSplitDistanceKm).toBeNull()
   })
 })
 

@@ -52,9 +52,79 @@ function getAlertReason(g: {
   return null
 }
 
+const SPORT_BAR_COLOR: Record<string, string> = {
+  swim: 'bg-blue-500',
+  bike: 'bg-yellow-500',
+  run: 'bg-green-500',
+}
+
+function SportBreakdown({ loadByType, totalLoad }: { loadByType: Record<string, number>; totalLoad: number }) {
+  return (
+    <section className="bg-slate-900 rounded-2xl p-5">
+      <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Répartition de la charge</h2>
+      <div className="space-y-3">
+        {(['swim', 'bike', 'run'] as const).map((sport) => {
+          const load = loadByType[sport] ?? 0
+          const pct = totalLoad > 0 ? Math.round((load / totalLoad) * 100) : 0
+          return (
+            <div key={sport}>
+              <div className="flex justify-between text-sm mb-1">
+                <span className={SPORT_COLORS[sport]}>{SPORT_LABELS[sport]}</span>
+                <span className="text-slate-400 tabular-nums">{load} UA ({pct} %)</span>
+              </div>
+              <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${SPORT_BAR_COLOR[sport]}`} style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+type GearAlert = { gear: { id: string; name: string }; reason: string }
+
+function GearAlertList({ alerts }: { alerts: GearAlert[] }) {
+  return (
+    <section>
+      <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Alertes matériel ({alerts.length})</h2>
+      {alerts.length === 0 ? (
+        <div className="bg-slate-900 rounded-xl px-4 py-5 text-sm text-slate-500">Tout est en ordre — aucune alerte.</div>
+      ) : (
+        <div className="space-y-2">
+          {alerts.map(({ gear: g, reason }) => (
+            <div key={g.id} className="bg-red-950/30 border border-red-800/50 rounded-xl px-4 py-3 flex items-center justify-between gap-4">
+              <div>
+                <p className="font-medium text-slate-100 text-sm">{g.name}</p>
+                <p className="text-xs text-red-400 mt-0.5">{reason}</p>
+              </div>
+              <Link href={`/gear/${g.id}/edit`} className="text-xs text-slate-400 hover:text-slate-200 shrink-0 px-2 py-1 rounded hover:bg-slate-800 transition-colors">Gérer</Link>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function QuickNavLinks() {
+  return (
+    <section className="grid gap-3 sm:grid-cols-2">
+      <Link href="/sessions" className="bg-slate-900 hover:bg-slate-800 transition-colors rounded-xl px-5 py-4 flex items-center justify-between">
+        <span className="font-medium text-slate-200">Sessions</span>
+        <span className="text-slate-500 text-sm">→</span>
+      </Link>
+      <Link href="/gear" className="bg-slate-900 hover:bg-slate-800 transition-colors rounded-xl px-5 py-4 flex items-center justify-between">
+        <span className="font-medium text-slate-200">Matériel</span>
+        <span className="text-slate-500 text-sm">→</span>
+      </Link>
+    </section>
+  )
+}
+
 export default async function HomePage() {
   const weekStart = getMondayISO()
-
   const [weekSessions, allGear] = await Promise.all([
     db.select().from(sessions).where(gte(sessions.date, weekStart)),
     db.select().from(gear).where(eq(gear.status, 'active')),
@@ -63,15 +133,13 @@ export default async function HomePage() {
   const totalLoad = weekSessions.reduce((sum, s) => sum + s.calculatedLoad, 0)
   const totalDistance = weekSessions.reduce((sum, s) => sum + s.distance, 0)
   const totalDurationMin = weekSessions.reduce((sum, s) => sum + Math.round(s.duration / 60), 0)
-
   const loadByType = weekSessions.reduce<Record<string, number>>((acc, s) => {
     acc[s.sportType] = (acc[s.sportType] ?? 0) + s.calculatedLoad
     return acc
   }, {})
-
   const alerts = allGear
     .map((g) => ({ gear: g, reason: getAlertReason(g) }))
-    .filter((a) => a.reason !== null) as { gear: typeof allGear[number]; reason: string }[]
+    .filter((a) => a.reason !== null) as GearAlert[]
 
   return (
     <div className="space-y-8">
@@ -79,98 +147,20 @@ export default async function HomePage() {
         <h1 className="text-2xl font-bold text-slate-100">Dashboard</h1>
         <p className="text-sm text-slate-500 mt-1">Semaine du {weekStart}</p>
       </div>
-
-      {/* Charge de la semaine */}
       <section className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Charge totale" value={`${totalLoad} UA`} sub={`${weekSessions.length} session${weekSessions.length !== 1 ? 's' : ''}`} highlight />
         <StatCard label="Distance" value={`${totalDistance.toFixed(1)} km`} />
         <StatCard label="Temps d'entraînement" value={`${totalDurationMin} min`} />
       </section>
-
-      {/* Répartition par sport */}
-      {weekSessions.length > 0 && (
-        <section className="bg-slate-900 rounded-2xl p-5">
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">
-            Répartition de la charge
-          </h2>
-          <div className="space-y-3">
-            {(['swim', 'bike', 'run'] as const).map((sport) => {
-              const load = loadByType[sport] ?? 0
-              const pct = totalLoad > 0 ? Math.round((load / totalLoad) * 100) : 0
-              return (
-                <div key={sport}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className={SPORT_COLORS[sport]}>{SPORT_LABELS[sport]}</span>
-                    <span className="text-slate-400 tabular-nums">{load} UA ({pct} %)</span>
-                  </div>
-                  <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${sport === 'swim' ? 'bg-blue-500' : sport === 'bike' ? 'bg-yellow-500' : 'bg-green-500'}`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
+      {weekSessions.length > 0 && <SportBreakdown loadByType={loadByType} totalLoad={totalLoad} />}
       {weekSessions.length === 0 && (
         <div className="bg-slate-900 rounded-2xl p-6 text-center">
           <p className="text-slate-500 text-sm">Aucune session cette semaine.</p>
-          <Link href="/sessions" className="mt-3 inline-block text-sm text-slate-300 hover:text-white underline underline-offset-4">
-            Ajouter une session →
-          </Link>
+          <Link href="/sessions" className="mt-3 inline-block text-sm text-slate-300 hover:text-white underline underline-offset-4">Ajouter une session →</Link>
         </div>
       )}
-
-      {/* Alertes matériel */}
-      <section>
-        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">
-          Alertes matériel ({alerts.length})
-        </h2>
-        {alerts.length === 0 ? (
-          <div className="bg-slate-900 rounded-xl px-4 py-5 text-sm text-slate-500">
-            Tout est en ordre — aucune alerte.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {alerts.map(({ gear: g, reason }) => (
-              <div key={g.id} className="bg-red-950/30 border border-red-800/50 rounded-xl px-4 py-3 flex items-center justify-between gap-4">
-                <div>
-                  <p className="font-medium text-slate-100 text-sm">{g.name}</p>
-                  <p className="text-xs text-red-400 mt-0.5">{reason}</p>
-                </div>
-                <Link
-                  href={`/gear/${g.id}/edit`}
-                  className="text-xs text-slate-400 hover:text-slate-200 shrink-0 px-2 py-1 rounded hover:bg-slate-800 transition-colors"
-                >
-                  Gérer
-                </Link>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Raccourcis */}
-      <section className="grid gap-3 sm:grid-cols-2">
-        <Link
-          href="/sessions"
-          className="bg-slate-900 hover:bg-slate-800 transition-colors rounded-xl px-5 py-4 flex items-center justify-between"
-        >
-          <span className="font-medium text-slate-200">Sessions</span>
-          <span className="text-slate-500 text-sm">→</span>
-        </Link>
-        <Link
-          href="/gear"
-          className="bg-slate-900 hover:bg-slate-800 transition-colors rounded-xl px-5 py-4 flex items-center justify-between"
-        >
-          <span className="font-medium text-slate-200">Matériel</span>
-          <span className="text-slate-500 text-sm">→</span>
-        </Link>
-      </section>
+      <GearAlertList alerts={alerts} />
+      <QuickNavLinks />
     </div>
   )
 }
