@@ -5,4 +5,10 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
-      WEBHOOK_URL: ""
+      DATABASE_URL: "file:/app/data/local.db"
+      WEBHOOK_URL: "https://discord.com/api/webhooks/1521442426995216474/UJsokr96FVB1LoZKzPhXPYBLRrjRZiFAiSt0rlzywkcJNHooS88_QkcIgdJORxj-Yftg"
+    volumes:
+      - cadence_data:/app/data
+
+volumes:
+  cadence_data:

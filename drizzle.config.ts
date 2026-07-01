@@ -5,6 +5,6 @@ export default defineConfig({
   out: './drizzle',
   dialect: 'turso',
   dbCredentials: {
-    url: 'file:local.db',
+    url: process.env.DATABASE_URL ?? 'file:local.db',
   },
 })

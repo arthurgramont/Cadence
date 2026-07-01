@@ -1,3 +1,4 @@
 import { drizzle } from 'drizzle-orm/libsql'
 
-export const db = drizzle('file:local.db')
+const dbUrl = process.env.DATABASE_URL ?? 'file:local.db'
+export const db = drizzle(dbUrl)
