@@ -5,10 +5,10 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
-      DATABASE_URL: "file:/app/data/local.db"
+      DATABASE_URL: "file:/app/storage/db.sqlite"
       WEBHOOK_URL: ${WEBHOOK_URL}
     volumes:
-      - cadence_data:/app/data
+      - cadence_data:/app/storage
 
 volumes:
   cadence_data:
