@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-export type LogLevel = 'INFO' | 'ERROR'
+export type LogLevel = 'INFO' | 'ERROR' | 'ACTION'
 
 export type LogEntry = {
   id: string
@@ -44,6 +44,10 @@ function appendLog(level: LogLevel, message: string, context?: Record<string, st
   } catch {
     // Filesystem unavailable in this environment — log entry silently dropped
   }
+}
+
+export function logAction(message: string, context?: Record<string, string>): void {
+  appendLog('ACTION', message, context)
 }
 
 export function logInfo(message: string, context?: Record<string, string>): void {

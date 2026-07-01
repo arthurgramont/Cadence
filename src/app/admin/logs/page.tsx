@@ -1,5 +1,7 @@
 import { readLogs, type LogEntry, type LogLevel } from '@/lib/utils/logger'
 
+export const dynamic = 'force-dynamic';
+
 function LevelBadge({ level }: { level: LogLevel }) {
   const styles =
     level === 'ERROR'
