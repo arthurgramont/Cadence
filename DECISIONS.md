@@ -137,10 +137,69 @@ Workflow de feature branch simplifié (usage solo) :
 
 ---
 
+---
+
+## ADR-007 — Stratégie de migration SQLite en production Docker
+
+**Date** : 2026-07-01
+**Statut** : Accepté
+
+### Contexte
+Le déploiement Docker de l'application Next.js doit initialiser le schéma SQLite au premier démarrage sans accès interactif. Deux contraintes s'opposaient :
+
+1. `drizzle-kit push` génère et applique le schéma en une commande, mais nécessite le binaire `drizzle-kit` au runtime — incompatible avec une image de production `--omit=dev`.
+2. La base SQLite doit résider dans un volume Docker monté (`/app/storage/`) qui n'existe pas au build.
+
+### Options envisagées
+
+| Option | Avantages | Inconvénients |
+|---|---|---|
+| `drizzle-kit push` au runtime | Simple | Dépendance devDep au runtime, SQLITE_CANTOPEN au build |
+| `drizzle-kit generate` + `migrate.mjs` | Sépare génération et application | Nécessite un fichier de migration explicite |
+| `touch db.sqlite` au build + migrate au runtime | Compatible production | Deux étapes découplées |
+
+### Décision
+
+**Build** : `RUN npx drizzle-kit generate` génère les fichiers de migration dans `drizzle/`. Un `touch /app/storage/db.sqlite` crée un fichier vide pour que la couche suivante puisse le copier si besoin.
+
+**Runtime** : `docker-entrypoint.sh` s'exécute au démarrage du conteneur :
+```sh
+su-exec nextjs node /app/scripts/migrate.mjs   # applique les migrations sur le volume monté
+exec su-exec nextjs node server.js             # lance Next.js
+```
+
+`su-exec` (Alpine) permet de démarrer en root pour `mkdir /app/storage && chown`, puis de basculer vers l'utilisateur `nextjs` sans processus intermédiaire — équivalent d'un `gosu` minimaliste.
+
+### Conséquences
+
+- `drizzle-kit` n'est plus une dépendance runtime : l'image de production utilise `--omit=dev`.
+- Le volume Docker (`cadence_data:/app/storage`) préserve la base entre les redémarrages de conteneur.
+- L'erreur `SQLITE_CANTOPEN 14` est contournée : le fichier DB est créé (ou déjà présent sur le volume) avant l'appel à `migrate.mjs`.
+- **Règle dérivée dans CLAUDE.md** : ne jamais appeler `drizzle-kit push` au runtime dans le contexte Docker.
+
+---
+
+## ADR-008 — `force-dynamic` sur les routes de données
+
+**Date** : 2026-07-01
+**Statut** : Accepté
+
+### Contexte
+Next.js 15+ pré-rend les Server Components en statique par défaut. Sur `app/page.tsx`, `app/sessions/page.tsx` et `app/gear/page.tsx`, ce comportement produit un cache de pré-rendu figé qui ignore les mutations récentes de la base SQLite locale.
+
+### Décision
+Ajouter `export const dynamic = 'force-dynamic'` sur les trois routes de données. Les pages d'administration (`/admin/logs`) héritent de ce comportement.
+
+### Conséquences
+- Chaque requête HTTP déclenche une lecture fraîche de la base — acceptable pour un dashboard solo sans CDN.
+- Le build Next.js ne tente plus de pré-rendre ces pages : les imports Drizzle (qui ouvrent le fichier SQLite) n'échouent plus au build.
+
+---
+
 ## Décisions en attente
 
 | ID | Question ouverte | Priorité |
 |---|---|---|
-| ADR-007 | Framework de test (Vitest) — setup et périmètre de couverture | J4 |
-| ADR-008 | Zones d'allure : basées sur VMA ou allure cible ? | J3 |
-| ADR-009 | Export des données — format CSV ou JSON ? | J3 |
+| ADR-009 | Framework de test (Vitest) — setup et périmètre de couverture | J4 |
+| ADR-010 | Zones d'allure : basées sur VMA ou allure cible ? | Backlog |
+| ADR-011 | Export des données — format CSV ou JSON ? | Résolu (les deux, via export-logs.mjs) |
