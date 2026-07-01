@@ -3,6 +3,8 @@ import { sessions, gear } from '@/db/schema'
 import { gte, eq } from 'drizzle-orm'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic';
+
 const SPORT_LABELS: Record<string, string> = {
   swim: 'Natation',
   bike: 'Vélo',

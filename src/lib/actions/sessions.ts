@@ -6,6 +6,7 @@ import { eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { type ActionState, validateDuration, validateRpe, validateDistance } from './shared'
+import { logAction } from '@/lib/utils/logger'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -72,6 +73,11 @@ export async function addSessionAction(
       if (!gearId) return
       await tx.update(gear).set(incrementGear(distance)).where(eq(gear.id, gearId))
     })
+    logAction(`Création d'une session de ${sportType}`, { 
+      sessionId: sessionRecord.id, 
+      distance: `${distance} km`, 
+      gearId: gearId ?? 'Aucun' 
+    })
   } catch (err) {
     console.error('[addSessionAction]', err)
     return { error: "Erreur lors de l'enregistrement. Veuillez réessayer." }
@@ -114,6 +120,11 @@ export async function editSessionAction(
       await tx.update(sessions).set(sessionUpdate).where(eq(sessions.id, id))
       await Promise.all(deltas.map((op) => tx.update(gear).set(adjustGear(op.delta)).where(eq(gear.id, op.gearId))))
     })
+    logAction(`Modification de la session (${sportType})`, { 
+      sessionId: id, 
+      ancienneDistance: `${existing.distance} km`, 
+      nouvelleDistance: `${newDistance} km` 
+    })
   } catch (err) {
     console.error('[editSessionAction]', err)
     return { error: 'Erreur lors de la mise à jour. Veuillez réessayer.' }
@@ -137,6 +148,10 @@ export async function deleteSessionAction(formData: FormData): Promise<void> {
       await tx.delete(sessions).where(eq(sessions.id, id))
       if (!existing.gearId) return
       await tx.update(gear).set(decrementGear(existing.distance)).where(eq(gear.id, existing.gearId))
+    })
+    logAction(`Suppression d'une session de ${existing.sportType}`, { 
+      sessionId: id, 
+      distanceSupprimee: `${existing.distance} km` 
     })
   } catch (err) {
     console.error('[deleteSessionAction]', err)

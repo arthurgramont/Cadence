@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState } from 'react'
+import { useActionState, useState } from 'react'
 import { addGearAction, type ActionState } from '@/lib/actions'
 import { inputClass, selectClass, FormField, FormBanner } from '@/components/ui/form'
 import { GEAR_TYPES } from '@/lib/constants/gear'
@@ -33,36 +33,36 @@ function GearInputs({ selectedType, onTypeChange }: { selectedType: string; onTy
   )
 }
 
+function GearFormBody({ formAction, isPending }: { formAction: (formData: FormData) => void; isPending: boolean }) {
+  const [selectedType, setSelectedType] = useState('shoes')
+  return (
+    <form action={formAction} className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <GearInputs selectedType={selectedType} onTypeChange={setSelectedType} />
+      <div className="sm:col-span-3 flex items-center justify-between pt-2">
+        <p className="text-xs text-slate-500">Conseils : chaussures ~800 km · vélo ~15 000 km · combinaison ~200 km</p>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="bg-slate-100 text-slate-800 text-sm font-medium px-5 py-2 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isPending ? 'Enregistrement…' : 'Ajouter'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
 export function GearForm() {
   const [state, formAction, isPending] = useActionState(addGearAction, initialState)
-  const formRef = useRef<HTMLFormElement>(null)
-  const [selectedType, setSelectedType] = useState('shoes')
 
-  useEffect(() => {
-    if (state.success) {
-      formRef.current?.reset()
-      setSelectedType('shoes')
-    }
-  }, [state.success])
-
+  // state.formVersion changes on each successful submission (set by addGearAction).
+  // Using it as the key remounts GearFormBody, resetting all inputs and selectedType.
   return (
     <section className="bg-slate-900 rounded-2xl p-6">
       <h2 className="text-base font-semibold text-slate-100 mb-5">Ajouter du matériel</h2>
       {state.error && <FormBanner type="error">{state.error}</FormBanner>}
       {state.success && <FormBanner type="success">Matériel ajouté avec succès.</FormBanner>}
-      <form ref={formRef} action={formAction} className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <GearInputs selectedType={selectedType} onTypeChange={setSelectedType} />
-        <div className="sm:col-span-3 flex items-center justify-between pt-2">
-          <p className="text-xs text-slate-500">Conseils : chaussures ~800 km · vélo ~15 000 km · combinaison ~200 km</p>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="bg-slate-100 text-slate-800 text-sm font-medium px-5 py-2 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isPending ? 'Enregistrement…' : 'Ajouter'}
-          </button>
-        </div>
-      </form>
+      <GearFormBody key={state.formVersion ?? '0'} formAction={formAction} isPending={isPending} />
     </section>
   )
 }

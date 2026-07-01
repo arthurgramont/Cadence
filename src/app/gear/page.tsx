@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { GearForm } from './GearForm'
 import { GearDeleteForm } from './GearDeleteForm'
 
+export const dynamic = 'force-dynamic';
+
 const GEAR_LABELS: Record<string, string> = {
   shoes: 'Chaussures de course',
   bike: 'Vélo',

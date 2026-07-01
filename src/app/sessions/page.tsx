@@ -7,6 +7,8 @@ import { deleteSessionAction } from '@/lib/actions'
 import { DeleteConfirmButton } from '@/components/DeleteConfirmButton'
 import { SportBadge } from '@/components/SportBadge'
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Page Sessions — Server Component.
  * Data-fetching côté serveur + Client Components pour les formulaires interactifs.

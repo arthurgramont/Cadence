@@ -26,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <NavLink href="/sessions">Sessions</NavLink>
               <NavLink href="/gear">Matériel</NavLink>
               <NavLink href="/tools">Outils</NavLink>
+              <NavLink href="/admin/logs" subtle>Logs</NavLink>
             </div>
           </nav>
         </header>
@@ -35,11 +36,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   );
 }
 
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+function NavLink({ href, children, subtle }: { href: string; children: React.ReactNode; subtle?: boolean }) {
   return (
     <Link
       href={href}
-      className="px-3 py-1.5 rounded-md text-sm text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
+      className={`px-3 py-1.5 rounded-md text-sm transition-colors hover:bg-slate-800 ${subtle ? "text-slate-600 hover:text-slate-400" : "text-slate-400 hover:text-slate-100"}`}
     >
       {children}
     </Link>

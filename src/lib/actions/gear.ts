@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { type ActionState } from './shared'
+import { logAction } from '@/lib/utils/logger'
 
 const VALID_GEAR_TYPES = ['shoes', 'bike', 'wetsuit', 'helmet'] as const
 
@@ -26,9 +27,11 @@ export async function addGearAction(
   if (!Number.isFinite(distanceMax) || distanceMax < 1)
     return { error: 'La distance maximale doit être supérieure à 0 km.' }
 
+  const newId = crypto.randomUUID()
+
   try {
     await db.insert(gear).values({
-      id: crypto.randomUUID(),
+      id: newId,
       name,
       type,
       distanceCumulated: 0,
@@ -37,13 +40,18 @@ export async function addGearAction(
       lastMaintenanceDate,
       status: 'active',
     })
+    logAction(`Ajout du matériel : ${name}`, { 
+      gearId: newId, 
+      type, 
+      limiteKm: `${distanceMax} km` 
+    })
   } catch (err) {
     console.error('[addGearAction]', err)
     return { error: "Erreur lors de l'enregistrement. Veuillez réessayer." }
   }
 
   revalidatePath('/', 'layout')
-  return { success: true }
+  return { success: true, formVersion: newId }
 }
 
 // ─── UPDATE ───────────────────────────────────────────────────────────────────
@@ -71,6 +79,11 @@ export async function editGearAction(
       .update(gear)
       .set({ name, type, distanceMax, purchaseDate, lastMaintenanceDate, status })
       .where(eq(gear.id, id))
+    logAction(`Modification du matériel : ${name}`, { 
+      gearId: id, 
+      status, 
+      limiteKm: `${distanceMax} km` 
+    })
   } catch (err) {
     console.error('[editGearAction]', err)
     return { error: 'Erreur lors de la mise à jour. Veuillez réessayer.' }
@@ -106,7 +119,11 @@ export async function deleteGearAction(
     }
 
   try {
+    const [existingGear] = await db.select().from(gear).where(eq(gear.id, id)).limit(1)
     await db.delete(gear).where(eq(gear.id, id))
+    logAction(`Suppression du matériel : ${existingGear?.name || id}`, { 
+      gearId: id 
+    })
   } catch (err) {
     console.error('[deleteGearAction]', err)
     return { error: 'Erreur lors de la suppression.' }

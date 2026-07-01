@@ -1,4 +1,4 @@
-export type ActionState = { error?: string; success?: boolean }
+export type ActionState = { error?: string; success?: boolean; formVersion?: string }
 
 export function validateRpe(rpe: number): string | null {
   if (!Number.isFinite(rpe) || rpe < 1 || rpe > 10)
