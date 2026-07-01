@@ -6,7 +6,7 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: "file:/app/data/local.db"
-      WEBHOOK_URL: "https://discord.com/api/webhooks/1521442426995216474/UJsokr96FVB1LoZKzPhXPYBLRrjRZiFAiSt0rlzywkcJNHooS88_QkcIgdJORxj-Yftg"
+      WEBHOOK_URL: ${WEBHOOK_URL}
     volumes:
       - cadence_data:/app/data
 
