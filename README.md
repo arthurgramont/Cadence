@@ -1,7 +1,9 @@
-# Cadence
+# Cadence 
 
 Dashboard de performance et de suivi de matériel pour triathlètes.  
 Cadence automatise le calcul de la charge d'entraînement et prévient l'usure critique des équipements selon des critères kilométriques et temporels stricts.
+
+Github: [github.com/arthurgramont/Cadence](https://github.com/arthurgramont/Cadence)
 
 ---
 
