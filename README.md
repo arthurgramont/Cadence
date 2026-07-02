@@ -68,6 +68,14 @@ npx tsx scripts/calculate-splits.ts 42.195 12600   # Marathon en 3h30
 npx tsx scripts/audit-dette.ts
 # Score actuel : 100 % — zéro violation
 
+# Export des logs système
+node scripts/export-logs.mjs           # CSV (défaut)
+node scripts/export-logs.mjs --md      # Markdown
+node scripts/export-logs.mjs > logs_export.csv
+
+# Lancer les migrations manuellement (hors Docker)
+node scripts/migrate.mjs
+
 # Visualiser la base de données
 npx drizzle-kit studio
 ```
@@ -82,7 +90,8 @@ src/
 │   ├── page.tsx                # Dashboard (Server Component)
 │   ├── sessions/               # CRUD sessions
 │   ├── gear/                   # CRUD matériel
-│   └── tools/                  # Calculateur de splits (UI)
+│   ├── tools/                  # Calculateur de splits (UI)
+│   └── admin/logs/             # Visualisation des logs système
 ├── components/
 │   ├── SportBadge.tsx          # Badge sport partagé
 │   ├── DeleteConfirmButton.tsx
@@ -90,6 +99,7 @@ src/
 ├── db/
 │   ├── schema.ts               # Schéma Drizzle (sessions, gear, raceGoals)
 │   └── index.ts
+├── instrumentation.ts          # Auto-migration Drizzle au démarrage Next.js
 └── lib/
     ├── actions/                # Server Actions (CRUD atomiques)
     │   ├── sessions.ts         # addSessionAction, editSessionAction, deleteSessionAction
@@ -104,7 +114,12 @@ src/
 
 scripts/
 ├── calculate-splits.ts         # Wrapper CLI -> src/lib/utils/splits.ts
-└── audit-dette.ts              # Scanner de dette technique déterministe
+├── audit-dette.ts              # Scanner de dette technique déterministe
+├── export-logs.mjs             # Export des logs système en CSV ou Markdown
+└── migrate.mjs                 # Lancement manuel des migrations Drizzle
+
+storage/
+└── logs.json                   # Journal des actions utilisateur (persisté en Docker)
 ```
 
 ### Règles métier critiques
@@ -123,6 +138,16 @@ scripts/
 `CLAUDE.md` n'est pas de la documentation — c'est un **contrat exécutable** passé entre le projet et l'agent IA. Il liste les règles métier à ne jamais casser (atomicité des km, calcul de charge, seuils d'usure), les anti-patterns spécifiques (pas de LLM dans les calculs, pas de logique DB dans les composants, pas de valeurs hardcodées) et les conventions de code strictes (zéro `any`, zéro stub, zéro god file).
 
 Sans ce contrat, l'agent générerait des solutions techniquement valides mais architecturalement incohérentes : logique métier dispersée dans les composants React, seuils d'usure figés en littéraux, fonctions de calcul réécrites à chaque appel au lieu d'être centralisées.
+
+### Husky comme gate de commit
+
+Un hook pre-commit Husky refuse tout commit qui ne passe pas le double-gate :
+
+```bash
+npm test && npx tsx scripts/audit-dette.ts
+```
+
+Le code ne peut pas entrer dans l'historique git si les tests échouent ou si l'audit descend sous 100 %. Ce n'est pas un filet contre Claude — c'est un invariant sur tout contributeur, humain ou agent.
 
 ### Le linter comme gate de qualité
 
@@ -210,4 +235,6 @@ C'est l'humain qui a identifié l'erreur 400 en testant le bouton export sur une
 | `CLAUDE.md` | Contrat d'exécution : règles métier, anti-patterns, conventions de code |
 | `DECISIONS.md` | Journal des ADRs — 6 décisions architecturales documentées avec contexte et justification |
 | `SKILL.md` | Documentation des 3 skills déterministes : splits, audit-dette, send-splits-notification |
+| `API_REFERENCE.md` | Référence auto-générée de toutes les Server Actions (généré par `/generate-api-docs`) |
+| `POST_MORTEM.md` | Retour d'expérience honnête sur la semaine : bugs capturés, leçons tirées, incident GitGuardian |
 | `.plan.md` | Contrat d'exécution quotidien validé avant chaque session de développement |
