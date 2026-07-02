@@ -1,0 +1,55 @@
+[
+  {
+    "id": "136f0582-cb7d-4c1a-8ad8-71a87a84b3a4",
+    "level": "ACTION",
+    "message": "Ajout du matériel : Nike Vaporfly Next",
+    "timestamp": "2026-07-02T07:56:51.739Z",
+    "context": {
+      "gearId": "0e538137-8e18-4feb-af45-4673aa1e26a6",
+      "type": "shoes",
+      "limiteKm": "850 km"
+    }
+  },
+  {
+    "id": "3e1a6070-a4e9-465a-bedd-e6f27a1d8fda",
+    "level": "ACTION",
+    "message": "Suppression du matériel : Nike Vaporfly Next",
+    "timestamp": "2026-07-02T08:00:02.196Z",
+    "context": {
+      "gearId": "0e538137-8e18-4feb-af45-4673aa1e26a6"
+    }
+  },
+  {
+    "id": "4c2c6a62-d862-4a99-96e4-9714d449dc5a",
+    "level": "ACTION",
+    "message": "Ajout du matériel : Nike Vaporfly Next",
+    "timestamp": "2026-07-02T08:00:30.500Z",
+    "context": {
+      "gearId": "5ee22767-62b7-431f-94c1-a37a12ee44a0",
+      "type": "shoes",
+      "limiteKm": "850 km"
+    }
+  },
+  {
+    "id": "42032a47-d74c-432a-9bcc-54639f5a87b4",
+    "level": "ACTION",
+    "message": "Ajout du matériel : Canyon CRF Aeroad",
+    "timestamp": "2026-07-02T08:01:11.045Z",
+    "context": {
+      "gearId": "4183e0f7-a9f7-462a-bfdd-3fb58d4dc2a2",
+      "type": "bike",
+      "limiteKm": "20000 km"
+    }
+  },
+  {
+    "id": "3bea2eb1-8eaa-41f0-88d1-f89b4afd5907",
+    "level": "ACTION",
+    "message": "Création d'une session de run",
+    "timestamp": "2026-07-02T08:01:31.381Z",
+    "context": {
+      "sessionId": "2add9295-b786-441d-995d-fb48a809238b",
+      "distance": "10.5 km",
+      "gearId": "5ee22767-62b7-431f-94c1-a37a12ee44a0"
+    }
+  }
+]

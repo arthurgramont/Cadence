@@ -6,7 +6,7 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: "file:/app/storage/db.sqlite"
-      WEBHOOK_URL: ${WEBHOOK_URL}
+      WEBHOOK_URL: "https://discord.com/api/webhooks/1521810319935012976/NTqAR_3Gj-lL209f2xHdWcoLkqHDPiPTj_ltcOg1O1-aEQYVfOaCQws3GXTWJnihfyc1"
     volumes:
       - cadence_data:/app/storage
 
